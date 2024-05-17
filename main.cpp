@@ -33,31 +33,6 @@ XrBool32 XRAPI_PTR DebugCallback(XrDebugUtilsMessageSeverityFlagsEXT messageSeve
     return XR_FALSE;
 }
 
-XrResult CreateDebugUtilsMessenger(XrInstance instance) {
-    /*
-    XrDebugUtilsMessengerCreateInfoEXT debugInfo = {};
-    debugInfo.type = XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debugInfo.messageSeverities = XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                                  XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-                                  XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                  XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debugInfo.messageTypes = XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                             XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                             XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-                             XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
-    debugInfo.userCallback = DebugCallback;
-
-    auto xrCreateDebugUtilsMessengerEXT = (PFN_xrCreateDebugUtilsMessengerEXT)
-        xrGetInstanceProcAddr(instance, "xrCreateDebugUtilsMessengerEXT");
-
-    if (xrCreateDebugUtilsMessengerEXT != nullptr) {
-        return xrCreateDebugUtilsMessengerEXT(instance, &debugInfo, &debugMessenger);
-    } else {
-        return XR_ERROR_FUNCTION_UNSUPPORTED;
-    }
-    */
-}
-
 
 
 
@@ -130,14 +105,6 @@ bool InitializeOpenXR(XrInstance& instance, XrSystemId& systemId) {
         }
         return false;
     }
-
-    // Setup Debug Messenger
-    /*
-    if (CreateDebugUtilsMessenger(instance) != XR_SUCCESS) {
-        std::cerr << "Failed to create debug utils messenger" << std::endl;
-        return false;
-    }
-    */
 
     // Get System Info
     XrSystemGetInfo systemInfo = { XR_TYPE_SYSTEM_GET_INFO };
