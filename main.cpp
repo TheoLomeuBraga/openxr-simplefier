@@ -59,12 +59,53 @@ void InitializeGLFW()
     }
 }
 
+void APIENTRY GLDebugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam)
+{
+    std::cerr << "OpenGL Debug Message:" << std::endl;
+    std::cerr << "Source: " << source << std::endl;
+    std::cerr << "Type: " << type << std::endl;
+    std::cerr << "ID: " << id << std::endl;
+    std::cerr << "Severity: " << severity << std::endl;
+    std::cerr << "Message: " << message << std::endl;
+}
+
 void InitializeOpenGL()
 {
     glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(GLDebugMessageCallback, nullptr);
 }
 namespace openxr_helper
 {
+
+    XrInstance instance = XR_NULL_HANDLE;
+    XrSystemId systemId = XR_NULL_SYSTEM_ID;
+    XrSession session = XR_NULL_HANDLE;
+
+    // XR_DOCS_TAG_BEGIN_Helper_Functions0
+    void OpenXRDebugBreak()
+    {
+        std::cerr << "Breakpoint here to debug." << std::endl;
+    }
+
+    const char *GetXRErrorString(XrInstance xrInstance, XrResult result)
+    {
+        static char string[XR_MAX_RESULT_STRING_SIZE];
+        xrResultToString(xrInstance, result, string);
+        return string;
+    }
+
+#define OPENXR_CHECK(x, y)                                                                                                                                  \
+    {                                                                                                                                                       \
+        XrResult result = (x);                                                                                                                              \
+        if (!XR_SUCCEEDED(result))                                                                                                                          \
+        {                                                                                                                                                   \
+            std::cerr << "ERROR: OPENXR: " << int(result) << "(" << (m_xrInstance ? GetXRErrorString(m_xrInstance, result) : "") << ") " << y << std::endl; \
+            OpenXRDebugBreak();                                                                                                                             \
+        }                                                                                                                                                   \
+    }
+
     std::string GetGraphicsAPIInstanceExtensionString()
     {
         return XR_KHR_OPENGL_ENABLE_EXTENSION_NAME;
@@ -92,6 +133,63 @@ namespace openxr_helper
     }
 #endif
 
+    bool InitializeOpenXR()
+    {
+        XrApplicationInfo appInfo = {"OpenXRExample", 1, "", 0, XR_CURRENT_API_VERSION};
+
+        XrInstanceCreateInfo createInfo = {XR_TYPE_INSTANCE_CREATE_INFO};
+        createInfo.applicationInfo = appInfo;
+
+        // Criação da instância OpenXR
+        XrResult result = xrCreateInstance(&createInfo, &instance);
+        if (result != XR_SUCCESS)
+        {
+            std::cerr << "Failed to create OpenXR instance: " << result << std::endl;
+            return false;
+        }
+
+        // Obtenção do sistema OpenXR
+        XrSystemGetInfo systemInfo = {XR_TYPE_SYSTEM_GET_INFO};
+        systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+
+        result = xrGetSystem(instance, &systemInfo, &systemId);
+        if (result != XR_SUCCESS)
+        {
+            std::cerr << "Failed to get OpenXR system: " << result << std::endl;
+            switch (result)
+            {
+            case XR_ERROR_FORM_FACTOR_UNSUPPORTED:
+                std::cerr << "Unsupported form factor" << std::endl;
+                break;
+            case XR_ERROR_INSTANCE_LOST:
+                std::cerr << "Instance lost" << std::endl;
+                break;
+            case XR_ERROR_RUNTIME_FAILURE:
+                std::cerr << "Runtime failure" << std::endl;
+                break;
+            case XR_ERROR_INITIALIZATION_FAILED:
+                std::cerr << "Initialization failed" << std::endl;
+                break;
+            case XR_ERROR_FUNCTION_UNSUPPORTED:
+                std::cerr << "Function unsupported" << std::endl;
+                break;
+            default:
+                std::cerr << "Unknown error" << std::endl;
+                break;
+            }
+            return false;
+        }
+
+        std::cout << "OpenXR instance created and system found!" << std::endl;
+        return true;
+    }
+
+    void start_OpenXR()
+    {
+        if (!InitializeOpenXR())
+            return;
+    }
+
     int SelectColorSwapchainFormat()
     {
         return GL_RGBA8;
@@ -102,24 +200,6 @@ namespace openxr_helper
         return GL_DEPTH_COMPONENT24;
     }
 
-    enum class SwapchainType : uint8_t
-    {
-        COLOR,
-        DEPTH
-    };
-
-    std::unordered_map<XrSwapchain, std::pair<SwapchainType, std::vector<XrSwapchainImageOpenGLKHR>>> swapchainImagesMap{};
-
-    XrSwapchainImageBaseHeader *AllocateSwapchainImageData(XrSwapchain swapchain, SwapchainType type, uint32_t count)
-    {
-        swapchainImagesMap[swapchain].first = type;
-        swapchainImagesMap[swapchain].second.resize(count, {XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR});
-        return reinterpret_cast<XrSwapchainImageBaseHeader *>(swapchainImagesMap[swapchain].second.data());
-    }
-    XrSwapchainImageBaseHeader *GetSwapchainImageData(XrSwapchain swapchain, uint32_t index) { return (XrSwapchainImageBaseHeader *)&swapchainImagesMap[swapchain].second[index]; }
-    void *GetSwapchainImage(XrSwapchain swapchain, uint32_t index) { return (void *)(uint64_t)swapchainImagesMap[swapchain].second[index].image; }
-
-    
 }
 
 void loopGLFW()
@@ -135,6 +215,7 @@ void loopOpenGL()
 int main()
 {
     InitializeGLFW();
+    openxr_helper::start_OpenXR();
     InitializeOpenGL();
 
     do
