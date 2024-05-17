@@ -1,27 +1,22 @@
 #include <GL/glew.h>
 
-
-#ifdef _WIN32
-
-#define XR_USE_PLATFORM_WIN32
 #define XR_USE_GRAPHICS_API_OPENGL
-#define GLFW_EXPOSE_NATIVE_WIN32
-
+#ifdef _WIN32
+#include <Windows.h>
+#include <GL/wglew.h>
+#define XR_USE_PLATFORM_WIN32
 #else
-
+#include <X11/Xlib.h>
 #include <GL/glx.h>
 #define XR_USE_PLATFORM_XLIB
-#define XR_USE_GRAPHICS_API_OPENGL
-#define GLFW_EXPOSE_NATIVE_X11
-
 #endif
 
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
+
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 #include <iostream>
 #include <vector>
+
 
 XrDebugUtilsMessengerEXT debugMessenger = XR_NULL_HANDLE;
 
@@ -33,51 +28,118 @@ XrBool32 XRAPI_PTR DebugCallback(XrDebugUtilsMessageSeverityFlagsEXT messageSeve
     return XR_FALSE;
 }
 
+#ifdef _WIN32
+HGLRC hGLRC = nullptr;
+HDC hDC = nullptr;
+HWND hwnd = nullptr;
 
+bool InitializeOpenGL() {
+    WNDCLASS wc = {};
+    wc.lpfnWndProc = DefWindowProc;
+    wc.hInstance = GetModuleHandle(nullptr);
+    wc.lpszClassName = "OpenGL";
+    RegisterClass(&wc);
 
+    hwnd = CreateWindowEx(0, "OpenGL", "OpenXR + OpenGL", WS_OVERLAPPEDWINDOW,
+                          CW_USEDEFAULT, CW_USEDEFAULT, 800, 600,
+                          nullptr, nullptr, wc.hInstance, nullptr);
 
-// Inicializa GLFW
-GLFWwindow* InitializeGLFW() {
-    if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
-        return nullptr;
-    }
+    hDC = GetDC(hwnd);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    PIXELFORMATDESCRIPTOR pfd = {};
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.iLayerType = PFD_MAIN_PLANE;
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "OpenXR + OpenGL", nullptr, nullptr);
-    if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return nullptr;
-    }
+    int pixelFormat = ChoosePixelFormat(hDC, &pfd);
+    SetPixelFormat(hDC, pixelFormat, &pfd);
 
-    glfwMakeContextCurrent(window);
+    hGLRC = wglCreateContext(hDC);
+    wglMakeCurrent(hDC, hGLRC);
 
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW" << std::endl;
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return nullptr;
+        return false;
     }
 
-    return window;
+    return true;
 }
 
+#else
+Display* xDisplay = nullptr;
+GLXContext glxContext = nullptr;
+Window xWindow;
 
-// Obtém as extensões necessárias para a API gráfica
+bool InitializeOpenGL() {
+    xDisplay = XOpenDisplay(nullptr);
+    if (!xDisplay) {
+        std::cerr << "Failed to open X display" << std::endl;
+        return false;
+    }
+
+    int screen = DefaultScreen(xDisplay);
+    int attribs[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
+    XVisualInfo* vi = glXChooseVisual(xDisplay, screen, attribs);
+    if (!vi) {
+        std::cerr << "No appropriate visual found" << std::endl;
+        return false;
+    }
+
+    XSetWindowAttributes swa = {};
+    swa.colormap = XCreateColormap(xDisplay, RootWindow(xDisplay, vi->screen), vi->visual, AllocNone);
+    swa.event_mask = ExposureMask | KeyPressMask;
+
+    xWindow = XCreateWindow(xDisplay, RootWindow(xDisplay, vi->screen),
+                            0, 0, 800, 600, 0, vi->depth, InputOutput,
+                            vi->visual, CWColormap | CWEventMask, &swa);
+
+    XMapWindow(xDisplay, xWindow);
+
+    glxContext = glXCreateContext(xDisplay, vi, nullptr, GL_TRUE);
+    glXMakeCurrent(xDisplay, xWindow, glxContext);
+
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+#endif
+
 std::vector<const char*> GetGraphicsAPIInstanceExtensionString() {
     std::vector<const char*> extensions;
     extensions.push_back(XR_KHR_OPENGL_ENABLE_EXTENSION_NAME);
     extensions.push_back(XR_EXT_DEBUG_UTILS_EXTENSION_NAME); // Para depuração
-    
     return extensions;
 }
 
+XrResult CreateDebugUtilsMessenger(XrInstance instance) {
+    XrDebugUtilsMessengerCreateInfoEXT debugInfo = {};
+    debugInfo.type = XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    debugInfo.messageSeverities = XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                                  XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                                  XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                  XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debugInfo.messageTypes = XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                             XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                             XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+                             XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
+    debugInfo.userCallback = DebugCallback;
 
-// Inicializa o OpenXR
+    PFN_xrCreateDebugUtilsMessengerEXT xrCreateDebugUtilsMessengerEXT = nullptr;
+    xrGetInstanceProcAddr(instance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&xrCreateDebugUtilsMessengerEXT));
+    if (xrCreateDebugUtilsMessengerEXT != nullptr) {
+        return xrCreateDebugUtilsMessengerEXT(instance, &debugInfo, &debugMessenger);
+    } else {
+        return XR_ERROR_FUNCTION_UNSUPPORTED;
+    }
+}
+
 bool InitializeOpenXR(XrInstance& instance, XrSystemId& systemId) {
     // Application Info
     XrApplicationInfo appInfo = {};
@@ -106,6 +168,12 @@ bool InitializeOpenXR(XrInstance& instance, XrSystemId& systemId) {
         return false;
     }
 
+    // Setup Debug Messenger
+    if (CreateDebugUtilsMessenger(instance) != XR_SUCCESS) {
+        std::cerr << "Failed to create debug utils messenger" << std::endl;
+        return false;
+    }
+
     // Get System Info
     XrSystemGetInfo systemInfo = { XR_TYPE_SYSTEM_GET_INFO };
     systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
@@ -119,24 +187,23 @@ bool InitializeOpenXR(XrInstance& instance, XrSystemId& systemId) {
     return true;
 }
 
-// Configura as ligações gráficas para Windows
 #ifdef _WIN32
 XrGraphicsBindingOpenGLWin32KHR GetGraphicsBindingWin32() {
     XrGraphicsBindingOpenGLWin32KHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR};
-    graphicsBinding.hDC = wglGetCurrentDC();
-    graphicsBinding.hGLRC = wglGetCurrentContext();
+    graphicsBinding.hDC = hDC;
+    graphicsBinding.hGLRC = hGLRC;
     if (graphicsBinding.hDC == nullptr || graphicsBinding.hGLRC == nullptr) {
         std::cerr << "Failed to get current DC or GLRC" << std::endl;
     }
     return graphicsBinding;
 }
 #else
-XrGraphicsBindingOpenGLXlibKHR GetGraphicsBindingXlib(GLFWwindow* window) {
+XrGraphicsBindingOpenGLXlibKHR GetGraphicsBindingXlib() {
     XrGraphicsBindingOpenGLXlibKHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR};
-    graphicsBinding.xDisplay = glfwGetX11Display();
+    graphicsBinding.xDisplay = xDisplay;
     graphicsBinding.glxFBConfig = nullptr;
-    graphicsBinding.glxDrawable = glfwGetX11Window(window);
-    graphicsBinding.glxContext = glXGetCurrentContext();
+    graphicsBinding.glxDrawable = xWindow;
+    graphicsBinding.glxContext = glxContext;
     if (graphicsBinding.xDisplay == nullptr || graphicsBinding.glxContext == nullptr) {
         std::cerr << "Failed to get current X Display or GLX Context" << std::endl;
     }
@@ -144,19 +211,16 @@ XrGraphicsBindingOpenGLXlibKHR GetGraphicsBindingXlib(GLFWwindow* window) {
 }
 #endif
 
-
-// Cria a sessão OpenXR
-bool CreateOpenXRSession(XrInstance instance, XrSystemId systemId, XrSession& session, GLFWwindow* window) {
+bool CreateOpenXRSession(XrInstance instance, XrSystemId systemId, XrSession& session) {
     XrSessionCreateInfo sessionCreateInfo = { XR_TYPE_SESSION_CREATE_INFO };
     #ifdef _WIN32
     XrGraphicsBindingOpenGLWin32KHR graphicsBinding = GetGraphicsBindingWin32();
     sessionCreateInfo.next = &graphicsBinding;
     #else
-    XrGraphicsBindingOpenGLXlibKHR graphicsBinding = GetGraphicsBindingXlib(window);
+    XrGraphicsBindingOpenGLXlibKHR graphicsBinding = GetGraphicsBindingXlib();
     sessionCreateInfo.next = &graphicsBinding;
     #endif
     sessionCreateInfo.systemId = systemId;
-    sessionCreateInfo.type  = XR_TYPE_SESSION_CREATE_INFO; 
 
     XrResult result = xrCreateSession(instance, &sessionCreateInfo, &session);
     if (result != XR_SUCCESS) {
@@ -186,6 +250,7 @@ bool CreateOpenXRSession(XrInstance instance, XrSystemId systemId, XrSession& se
             case XR_ERROR_EXTENSION_NOT_PRESENT:
                 std::cerr << "Extension not present" << std::endl;
                 break;
+                break;
             default:
                 std::cerr << "Unknown error" << std::endl;
                 break;
@@ -201,23 +266,36 @@ GLuint vertexArrayObject;
 GLuint vertexBufferObject;
 
 // Limpa os recursos alocados
-void Cleanup(XrInstance instance, XrSession session, GLFWwindow* window) {
+void Cleanup(XrInstance instance, XrSession session) {
     if (session != XR_NULL_HANDLE) {
         xrDestroySession(session);
     }
     if (instance != XR_NULL_HANDLE) {
         xrDestroyInstance(instance);
     }
-    if (window) {
-        glfwDestroyWindow(window);
+    #ifdef _WIN32
+    if (hGLRC) {
+        wglDeleteContext(hGLRC);
     }
-    glfwTerminate();
+    if (hDC) {
+        ReleaseDC(hwnd, hDC);
+    }
+    if (hwnd) {
+        DestroyWindow(hwnd);
+    }
+    #else
+    if (glxContext) {
+        glXDestroyContext(xDisplay, glxContext);
+    }
+    if (xDisplay) {
+        XCloseDisplay(xDisplay);
+    }
+    #endif
 
     glDeleteVertexArrays(1, &vertexArrayObject);
     glDeleteBuffers(1, &vertexBufferObject);
     glDeleteProgram(shaderProgram);
 }
-
 
 // Vertex shader source code
 const char* vertexShaderSource = R"glsl(
@@ -310,38 +388,58 @@ void RenderFrame() {
 }
 
 // Função principal que engloba toda a configuração e inicialização
-bool SetupOpenXRSession(XrInstance& instance, XrSystemId& systemId, XrSession& session, GLFWwindow*& window) {
-    window = InitializeGLFW();
-    if (!window) return false;
+bool SetupOpenXRSession(XrInstance& instance, XrSystemId& systemId, XrSession& session) {
+    if (!InitializeOpenGL()) return false;
 
     if (!InitializeOpenXR(instance, systemId)) return false;
 
-    if (!CreateOpenXRSession(instance, systemId, session, window)) return false;
+    if (!CreateOpenXRSession(instance, systemId, session)) return false;
 
     InitializeRendering();
 
     return true;
 }
 
-
 int main() {
     XrInstance instance = XR_NULL_HANDLE;
     XrSystemId systemId = XR_NULL_SYSTEM_ID;
     XrSession session = XR_NULL_HANDLE;
-    GLFWwindow* window = nullptr;
 
-    if (!SetupOpenXRSession(instance, systemId, session, window)) {
-        Cleanup(instance, session, window);
+    if (!SetupOpenXRSession(instance, systemId, session)) {
+        Cleanup(instance, session);
         return -1;
     }
 
     // Main loop
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+    bool running = true;
+    while (running) {
+        #ifdef _WIN32
+        MSG msg;
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) {
+                running = false;
+            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        #else
+        XEvent xEvent;
+        while (XPending(xDisplay)) {
+            XNextEvent(xDisplay, &xEvent);
+            if (xEvent.type == ClientMessage) {
+                running = false;
+            }
+        }
+        #endif
+
         RenderFrame();
-        glfwSwapBuffers(window);
+        #ifdef _WIN32
+        SwapBuffers(hDC);
+        #else
+        glXSwapBuffers(xDisplay, xWindow);
+        #endif
     }
 
-    Cleanup(instance, session, window);
+    Cleanup(instance, session);
     return 0;
 }
