@@ -1,17 +1,17 @@
 
 OS := $(shell uname -s)
 
-core_file = main_sdl.cpp
+core_file = main.cpp
 
 compile_command = 
 ifeq ($(OS),Windows_NT)
-	compile_command = g++ -o openxr_example.exe $(core_file) -IC:/msys64/mingw64/include -LC:/msys64/mingw64/lib -lglew32 -lglfw3 -lopenxr_loader -lopengl32 -lgdi32 `sdl2-config --cflags --libs`
+	compile_command = g++ -o openxr_example.exe $(core_file) -IC:/msys64/mingw64/include -LC:/msys64/mingw64/lib -lglew32 -lglfw3 -lopenxr_loader -lopengl32 -lgdi32 #`sdl2-config --cflags --libs`
 endif
 ifeq ($(findstring MINGW,$(OS)),MINGW)
-	compile_command = g++ -o openxr_example.exe $(core_file) -IC:/msys64/mingw64/include -LC:/msys64/mingw64/lib -lglew32 -lglfw3 -lopenxr_loader -lopengl32 -lgdi32 `sdl2-config --cflags --libs`
+	compile_command = g++ -o openxr_example.exe $(core_file) -IC:/msys64/mingw64/include -LC:/msys64/mingw64/lib -lglew32 -lglfw3 -lopenxr_loader -lopengl32 -lgdi32 #`sdl2-config --cflags --libs`
 endif
 ifeq ($(OS),Linux)
-	compile_command = g++ -o openxr_example $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader -lX11 `sdl2-config --cflags --libs`
+	compile_command = g++ -o openxr_example $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader -lX11 #`sdl2-config --cflags --libs`
 endif
 
 all: 
