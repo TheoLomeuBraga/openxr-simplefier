@@ -1,17 +1,33 @@
 #include <GL/glew.h>
 
+
+
 #ifdef _WIN32
 
+#include <windows.h>
+#include <GL/gl.h>
+#include <GL/wglext.h>
 #define XR_USE_PLATFORM_WIN32
-#define XR_USE_GRAPHICS_API_OPENGL
 #define GLFW_EXPOSE_NATIVE_WIN32
+#define XR_USE_GRAPHICS_API_OPENGL
 
-#else
+#endif
+
+#ifdef X11
 
 #include <GL/glx.h>
 #define XR_USE_PLATFORM_XLIB
-#define XR_USE_GRAPHICS_API_OPENGL
 #define GLFW_EXPOSE_NATIVE_X11
+#define XR_USE_GRAPHICS_API_OPENGL
+
+#endif
+
+#if WAYLAND 
+
+#include <wayland-client.h>
+#include <wayland-egl.h>
+#define XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR
+#define XR_USE_GRAPHICS_API_OPENGL
 
 #endif
 
@@ -120,7 +136,8 @@ namespace openxr_helper
         graphicsBinding.hGLRC = wglGetCurrentContext();
         return &graphicsBinding;
     }
-#else
+#endif
+#ifdef X11
     XrGraphicsBindingOpenGLXlibKHR graphicsBinding;
     const void *XR_MAY_ALIAS GetGraphicsBinding()
     {
@@ -129,6 +146,19 @@ namespace openxr_helper
         graphicsBinding.glxFBConfig = nullptr;
         graphicsBinding.glxDrawable = glfwGetX11Window(window);
         graphicsBinding.glxContext = glXGetCurrentContext();
+        return &graphicsBinding;
+    }
+#endif
+#ifdef WAYLAND
+
+
+    XrGraphicsBindingOpenGLWaylandKHR graphicsBinding;
+    const void *XR_MAY_ALIAS GetGraphicsBinding()
+    {
+        graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR};
+        graphicsBinding.display = glfwGetWaylandDisplay();
+        graphicsBinding.eglSurface = glfwGetWaylandWindow(window);
+        graphicsBinding.eglContext = eglGetCurrentContext();
         return &graphicsBinding;
     }
 #endif
@@ -184,9 +214,30 @@ namespace openxr_helper
         return true;
     }
 
+    bool create_openxr_session()
+    {
+        // Prepara a estrutura de informações da sessão
+        XrSessionCreateInfo sessionCreateInfo = { XR_TYPE_SESSION_CREATE_INFO };
+        sessionCreateInfo.next = GetGraphicsBinding();
+        sessionCreateInfo.systemId = systemId;
+
+        // Cria a sessão OpenXR
+        XrResult result = xrCreateSession(instance, &sessionCreateInfo, &session);
+        if (result != XR_SUCCESS)
+        {
+            std::cerr << "Failed to create OpenXR session: " << result << std::endl;
+            return false;
+        }
+
+        std::cout << "OpenXR session created!" << std::endl;
+        return true;
+    }
+
     void start_OpenXR()
     {
         if (!InitializeOpenXR())
+            return;
+        if (!create_openxr_session())
             return;
     }
 
