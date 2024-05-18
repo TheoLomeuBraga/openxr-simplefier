@@ -137,21 +137,32 @@ namespace openxr_helper
         return &graphicsBinding;
     }
 #endif
+
 #ifdef X11
     XrGraphicsBindingOpenGLXlibKHR graphicsBinding;
     const void *XR_MAY_ALIAS GetGraphicsBinding()
     {
         graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR};
         graphicsBinding.xDisplay = glfwGetX11Display();
-        graphicsBinding.glxFBConfig = nullptr;
+
+        int fbCount;
+        GLXFBConfig* fbConfigs = glXGetFBConfigs(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay), &fbCount);
+        if (fbConfigs && fbCount > 0) {
+            graphicsBinding.glxFBConfig = fbConfigs[0];
+            XFree(fbConfigs);
+        } else {
+            std::cerr << "Failed to get GLXFBConfig" << std::endl;
+            return nullptr;
+        }
+
+        graphicsBinding.visualid = XVisualIDFromVisual(DefaultVisual(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay)));
         graphicsBinding.glxDrawable = glfwGetX11Window(window);
         graphicsBinding.glxContext = glXGetCurrentContext();
         return &graphicsBinding;
     }
 #endif
+
 #ifdef WAYLAND
-
-
     XrGraphicsBindingOpenGLWaylandKHR graphicsBinding;
     const void *XR_MAY_ALIAS GetGraphicsBinding()
     {
@@ -216,20 +227,21 @@ namespace openxr_helper
 
     bool create_openxr_session()
     {
-        // Prepara a estrutura de informações da sessão
-        XrSessionCreateInfo sessionCreateInfo = { XR_TYPE_SESSION_CREATE_INFO };
-        sessionCreateInfo.next = GetGraphicsBinding();
-        sessionCreateInfo.systemId = systemId;
 
-        // Cria a sessão OpenXR
+        // Create session
+        XrSessionCreateInfo sessionCreateInfo = {XR_TYPE_SESSION_CREATE_INFO};
+        sessionCreateInfo.systemId = systemId;
+        
+        sessionCreateInfo.next = GetGraphicsBinding();
+        
+
         XrResult result = xrCreateSession(instance, &sessionCreateInfo, &session);
-        if (result != XR_SUCCESS)
-        {
+        if (result != XR_SUCCESS) {
             std::cerr << "Failed to create OpenXR session: " << result << std::endl;
             return false;
         }
 
-        std::cout << "OpenXR session created!" << std::endl;
+        std::cout << "OpenXR session created successfully!" << std::endl;
         return true;
     }
 
