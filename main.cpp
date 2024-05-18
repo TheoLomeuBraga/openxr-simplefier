@@ -3,32 +3,28 @@
 
 
 #ifdef _WIN32
-
 #include <windows.h>
 #include <GL/gl.h>
 #include <GL/wglext.h>
 #define XR_USE_PLATFORM_WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define XR_USE_GRAPHICS_API_OPENGL
-
 #endif
 
 #ifdef X11
-
 #include <GL/glx.h>
 #define XR_USE_PLATFORM_XLIB
 #define GLFW_EXPOSE_NATIVE_X11
 #define XR_USE_GRAPHICS_API_OPENGL
-
+#define GLFW_EXPOSE_NATIVE_X11
 #endif
 
-#if WAYLAND 
-
+#ifdef WAYLAND
 #include <wayland-client.h>
 #include <wayland-egl.h>
-#define XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR
+#define XR_USE_PLATFORM_WAYLAND
 #define XR_USE_GRAPHICS_API_OPENGL
-
+#define GLFW_EXPOSE_NATIVE_WAYLAND
 #endif
 
 #include <GLFW/glfw3.h>
@@ -37,269 +33,202 @@
 #include <openxr/openxr_platform.h>
 #include <iostream>
 
-#include <vector>
-#include <string>
-#include <map>
-#include <unordered_map>
+GLFWwindow* window = nullptr;
 
-// Inicializa GLFW
-GLFWwindow *window = NULL;
-void InitializeGLFW()
-{
-    if (!glfwInit())
-    {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
+const void *GetGraphicsBinding() {
+#ifdef _WIN32
+    XrGraphicsBindingOpenGLWin32KHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR};
+    graphicsBinding.hDC = wglGetCurrentDC();
+    graphicsBinding.hGLRC = wglGetCurrentContext();
+    return &graphicsBinding;
+#endif
+
+#ifdef X11
+    XrGraphicsBindingOpenGLXlibKHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR};
+    graphicsBinding.xDisplay = glfwGetX11Display();
+    int fbCount;
+    GLXFBConfig* fbConfigs = glXGetFBConfigs(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay), &fbCount);
+    if (fbConfigs && fbCount > 0) {
+        graphicsBinding.glxFBConfig = fbConfigs[0];
+        XFree(fbConfigs);
+    } else {
+        std::cerr << "Failed to get GLXFBConfig" << std::endl;
+        return nullptr;
+    }
+    graphicsBinding.visualid = XVisualIDFromVisual(DefaultVisual(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay)));
+    graphicsBinding.glxDrawable = glfwGetX11Window(window);
+    graphicsBinding.glxContext = glXGetCurrentContext();
+    return &graphicsBinding;
+#endif
+
+#ifdef WAYLAND
+    XrGraphicsBindingOpenGLWaylandKHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR};
+    graphicsBinding.display = glfwGetWaylandDisplay();
+    graphicsBinding.eglSurface = glfwGetWaylandWindow(window);
+    graphicsBinding.eglContext = eglGetCurrentContext();
+    return &graphicsBinding;
+#endif
+    return nullptr;
+}
+
+void SetupOpenXR() {
+    XrInstance instance;
+    XrInstanceCreateInfo createInfo{XR_TYPE_INSTANCE_CREATE_INFO};
+    strcpy(createInfo.applicationInfo.applicationName, "OpenXR Example");
+    createInfo.applicationInfo.applicationVersion = 1;
+    strcpy(createInfo.applicationInfo.engineName, "No Engine");
+    createInfo.applicationInfo.engineVersion = 1;
+    createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
+
+    if (xrCreateInstance(&createInfo, &instance) != XR_SUCCESS) {
+        std::cerr << "Failed to create XR instance." << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // More OpenXR setup code goes here
+}
 
-    window = glfwCreateWindow(800, 600, "OpenGL Triangle", nullptr, nullptr);
-    if (!window)
-    {
+int main() {
+    // Initialize GLFW
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        return -1;
+    }
+
+#ifdef X11
+    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
+#endif
+
+    // Create a GLFW window
+    window = glfwCreateWindow(800, 600, "OpenXR Triangle", nullptr, nullptr);
+    if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     glfwMakeContextCurrent(window);
 
-    if (glewInit() != GLEW_OK)
-    {
+    // Initialize GLEW
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW" << std::endl;
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
-}
-
-void APIENTRY GLDebugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam)
-{
-    std::cerr << "OpenGL Debug Message:" << std::endl;
-    std::cerr << "Source: " << source << std::endl;
-    std::cerr << "Type: " << type << std::endl;
-    std::cerr << "ID: " << id << std::endl;
-    std::cerr << "Severity: " << severity << std::endl;
-    std::cerr << "Message: " << message << std::endl;
-}
-
-void InitializeOpenGL()
-{
-    glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
-    glEnable(GL_DEBUG_OUTPUT);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glDebugMessageCallback(GLDebugMessageCallback, nullptr);
-}
-namespace openxr_helper
-{
-
-    XrInstance instance = XR_NULL_HANDLE;
-    XrSystemId systemId = XR_NULL_SYSTEM_ID;
-    XrSession session = XR_NULL_HANDLE;
-
-    // XR_DOCS_TAG_BEGIN_Helper_Functions0
-    void OpenXRDebugBreak()
-    {
-        std::cerr << "Breakpoint here to debug." << std::endl;
+        return -1;
     }
 
-    const char *GetXRErrorString(XrInstance xrInstance, XrResult result)
-    {
-        static char string[XR_MAX_RESULT_STRING_SIZE];
-        xrResultToString(xrInstance, result, string);
-        return string;
-    }
-
-#define OPENXR_CHECK(x, y)                                                                                                                                  \
-    {                                                                                                                                                       \
-        XrResult result = (x);                                                                                                                              \
-        if (!XR_SUCCEEDED(result))                                                                                                                          \
-        {                                                                                                                                                   \
-            std::cerr << "ERROR: OPENXR: " << int(result) << "(" << (m_xrInstance ? GetXRErrorString(m_xrInstance, result) : "") << ") " << y << std::endl; \
-            OpenXRDebugBreak();                                                                                                                             \
-        }                                                                                                                                                   \
-    }
-
-    std::string GetGraphicsAPIInstanceExtensionString()
-    {
-        return XR_KHR_OPENGL_ENABLE_EXTENSION_NAME;
-    }
-
-#ifdef _WIN32
-    XrGraphicsBindingOpenGLWin32KHR graphicsBinding;
-    const void *XR_MAY_ALIAS GetGraphicsBinding()
-    {
-        graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR};
-        graphicsBinding.hDC = wglGetCurrentDC();
-        graphicsBinding.hGLRC = wglGetCurrentContext();
-        return &graphicsBinding;
-    }
-#endif
-
-#ifdef X11
-    XrGraphicsBindingOpenGLXlibKHR graphicsBinding;
-    const void *XR_MAY_ALIAS GetGraphicsBinding()
-    {
-        graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR};
-        graphicsBinding.xDisplay = glfwGetX11Display();
-
-        int fbCount;
-        GLXFBConfig* fbConfigs = glXGetFBConfigs(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay), &fbCount);
-        if (fbConfigs && fbCount > 0) {
-            graphicsBinding.glxFBConfig = fbConfigs[0];
-            XFree(fbConfigs);
-        } else {
-            std::cerr << "Failed to get GLXFBConfig" << std::endl;
-            return nullptr;
+    // Compile the vertex shader
+    const GLchar* vertexSource =
+    R"glsl(
+        #version 150 core
+        in vec2 position;
+        void main() {
+            gl_Position = vec4(position, 0.0, 1.0);
         }
+    )glsl";
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexSource, nullptr);
+    glCompileShader(vertexShader);
 
-        graphicsBinding.visualid = XVisualIDFromVisual(DefaultVisual(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay)));
-        graphicsBinding.glxDrawable = glfwGetX11Window(window);
-        graphicsBinding.glxContext = glXGetCurrentContext();
-        return &graphicsBinding;
+    // Check for compile errors
+    GLint status;
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        char buffer[512];
+        glGetShaderInfoLog(vertexShader, 512, nullptr, buffer);
+        std::cerr << "Vertex Shader Compile Error: " << buffer << std::endl;
+        return -1;
     }
-#endif
 
-#ifdef WAYLAND
-    XrGraphicsBindingOpenGLWaylandKHR graphicsBinding;
-    const void *XR_MAY_ALIAS GetGraphicsBinding()
-    {
-        graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR};
-        graphicsBinding.display = glfwGetWaylandDisplay();
-        graphicsBinding.eglSurface = glfwGetWaylandWindow(window);
-        graphicsBinding.eglContext = eglGetCurrentContext();
-        return &graphicsBinding;
-    }
-#endif
-
-    bool InitializeOpenXR()
-    {
-        XrApplicationInfo appInfo = {"OpenXRExample", 1, "", 0, XR_CURRENT_API_VERSION};
-
-        XrInstanceCreateInfo createInfo = {XR_TYPE_INSTANCE_CREATE_INFO};
-        createInfo.applicationInfo = appInfo;
-
-        // Enumerate extensions
-        std::vector<XrExtensionProperties> extensions;
-        uint32_t extensionCount = 0;
-        xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr);
-        extensions.resize(extensionCount, {XR_TYPE_EXTENSION_PROPERTIES});
-        xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensions.data());
-
-        std::cout << "Available OpenXR extensions:" << std::endl;
-        for (const auto& ext : extensions) {
-            std::cout << ext.extensionName << std::endl;
+    // Compile the fragment shader
+    const GLchar* fragmentSource =
+    R"glsl(
+        #version 150 core
+        out vec4 outColor;
+        void main() {
+            outColor = vec4(1.0, 0.0, 0.0, 1.0);
         }
+    )glsl";
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentSource, nullptr);
+    glCompileShader(fragmentShader);
 
-        // Create OpenXR instance
-        XrResult result = xrCreateInstance(&createInfo, &instance);
-        if (result != XR_SUCCESS)
-        {
-            std::cerr << "Failed to create OpenXR instance: " << GetXRErrorString(instance, result) << std::endl;
-            return false;
-        }
-
-        // Obtenção do sistema OpenXR
-        XrSystemGetInfo systemInfo = {XR_TYPE_SYSTEM_GET_INFO};
-        systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-
-        result = xrGetSystem(instance, &systemInfo, &systemId);
-        if (result != XR_SUCCESS)
-        {
-            std::cerr << "Failed to get OpenXR system: " << GetXRErrorString(instance, result) << std::endl;
-            switch (result)
-            {
-            case XR_ERROR_FORM_FACTOR_UNSUPPORTED:
-                std::cerr << "Unsupported form factor" << std::endl;
-                break;
-            case XR_ERROR_INSTANCE_LOST:
-                std::cerr << "Instance lost" << std::endl;
-                break;
-            case XR_ERROR_RUNTIME_FAILURE:
-                std::cerr << "Runtime failure" << std::endl;
-                break;
-            case XR_ERROR_INITIALIZATION_FAILED:
-                std::cerr << "Initialization failed" << std::endl;
-                break;
-            case XR_ERROR_FUNCTION_UNSUPPORTED:
-                std::cerr << "Function unsupported" << std::endl;
-                break;
-            default:
-                std::cerr << "Unknown error" << std::endl;
-                break;
-            }
-            return false;
-        }
-
-        std::cout << "OpenXR instance created and system found!" << std::endl;
-        return true;
+    // Check for compile errors
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        char buffer[512];
+        glGetShaderInfoLog(fragmentShader, 512, nullptr, buffer);
+        std::cerr << "Fragment Shader Compile Error: " << buffer << std::endl;
+        return -1;
     }
 
+    // Link the vertex and fragment shader into a shader program
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
 
-
-    bool create_openxr_session()
-    {
-
-        // Create session
-        XrSessionCreateInfo sessionCreateInfo = {XR_TYPE_SESSION_CREATE_INFO};
-        sessionCreateInfo.systemId = systemId;
-        
-        sessionCreateInfo.next = GetGraphicsBinding();
-        
-
-        XrResult result = xrCreateSession(instance, &sessionCreateInfo, &session);
-        if (result != XR_SUCCESS) {
-            std::cerr << "Failed to create OpenXR session: " << result << std::endl;
-            return false;
-        }
-
-        std::cout << "OpenXR session created successfully!" << std::endl;
-        return true;
+    // Check for linking errors
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
+    if (status != GL_TRUE) {
+        char buffer[512];
+        glGetProgramInfoLog(shaderProgram, 512, nullptr, buffer);
+        std::cerr << "Shader Link Error: " << buffer << std::endl;
+        return -1;
     }
 
-    void start_OpenXR()
-    {
-        if (!InitializeOpenXR())
-            return;
-        if (!create_openxr_session())
-            return;
+    // Set up vertex data (and buffer(s)) and attribute pointers
+    GLfloat vertices[] = {
+        0.0f,  0.5f,
+        0.5f, -0.5f,
+       -0.5f, -0.5f
+    };
+
+    GLuint VBO, VAO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    // Initialize OpenXR
+    SetupOpenXR();
+
+    // Main loop
+    while (!glfwWindowShouldClose(window)) {
+        // Check for events
+        glfwPollEvents();
+
+        // Render
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glUseProgram(shaderProgram);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
+
+        // Submit frame to OpenXR
+        const void* graphicsBinding = GetGraphicsBinding();
+        // Use graphicsBinding with OpenXR to submit frame...
+
+        // Swap the buffers
+        glfwSwapBuffers(window);
     }
 
-    int SelectColorSwapchainFormat()
-    {
-        return GL_RGBA8;
-    }
+    // Clean up
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shaderProgram);
 
-    int SelectDepthSwapchainFormat()
-    {
-        return GL_DEPTH_COMPONENT24;
-    }
-
-}
-
-void loopGLFW()
-{
-    glfwSwapBuffers(window);
-    glfwPollEvents();
-}
-void loopOpenGL()
-{
-    glClear(GL_COLOR_BUFFER_BIT);
-}
-
-int main()
-{
-    InitializeGLFW();
-    openxr_helper::start_OpenXR();
-    InitializeOpenGL();
-
-    do
-    {
-        loopOpenGL();
-        loopGLFW();
-    } while (!glfwWindowShouldClose(window));
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
     return 0;
 }
