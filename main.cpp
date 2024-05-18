@@ -181,11 +181,23 @@ namespace openxr_helper
         XrInstanceCreateInfo createInfo = {XR_TYPE_INSTANCE_CREATE_INFO};
         createInfo.applicationInfo = appInfo;
 
-        // Criação da instância OpenXR
+        // Enumerate extensions
+        std::vector<XrExtensionProperties> extensions;
+        uint32_t extensionCount = 0;
+        xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr);
+        extensions.resize(extensionCount, {XR_TYPE_EXTENSION_PROPERTIES});
+        xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensions.data());
+
+        std::cout << "Available OpenXR extensions:" << std::endl;
+        for (const auto& ext : extensions) {
+            std::cout << ext.extensionName << std::endl;
+        }
+
+        // Create OpenXR instance
         XrResult result = xrCreateInstance(&createInfo, &instance);
         if (result != XR_SUCCESS)
         {
-            std::cerr << "Failed to create OpenXR instance: " << result << std::endl;
+            std::cerr << "Failed to create OpenXR instance: " << GetXRErrorString(instance, result) << std::endl;
             return false;
         }
 
@@ -196,7 +208,7 @@ namespace openxr_helper
         result = xrGetSystem(instance, &systemInfo, &systemId);
         if (result != XR_SUCCESS)
         {
-            std::cerr << "Failed to get OpenXR system: " << result << std::endl;
+            std::cerr << "Failed to get OpenXR system: " << GetXRErrorString(instance, result) << std::endl;
             switch (result)
             {
             case XR_ERROR_FORM_FACTOR_UNSUPPORTED:
@@ -224,6 +236,8 @@ namespace openxr_helper
         std::cout << "OpenXR instance created and system found!" << std::endl;
         return true;
     }
+
+
 
     bool create_openxr_session()
     {
