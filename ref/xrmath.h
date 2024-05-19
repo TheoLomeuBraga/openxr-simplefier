@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "openxr_headers/openxr.h"
+#include "openxr/openxr.h"
 #include <math.h>
 
 typedef enum

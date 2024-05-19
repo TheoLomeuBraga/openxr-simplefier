@@ -6,6 +6,10 @@
  * @author Christoph Haag <christoph.haag@collabora.com>
  */
 
+#ifdef __MINGW32__
+#undef main
+#endif
+
 // STD Header
 #include <iostream>
 #include <array>
@@ -1111,7 +1115,7 @@ void main_loop(XrExample* self)
 
 
 		XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
-		XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{0}};
+		XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
 		if (self->hand_tracking.system_supported) {
 
 			for (int i = 0; i < HAND_COUNT; i++) {
