@@ -239,10 +239,13 @@ bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h) {
 #ifdef WAYLAND
 
 bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int w, int h) {
+    printf("00000");
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Unable to initialize SDL: %s\n", SDL_GetError());
         return false;
     }
+
+    printf("AAAAA");
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -264,6 +267,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
+    printf("BBBBB");
+
     gl_context = SDL_GL_CreateContext(desktop_window);
     if (!gl_context) {
         printf("Unable to create OpenGL context: %s\n", SDL_GetError());
@@ -271,6 +276,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+
+    printf("CCCCC");
 
     GLenum err = glewInit();
     if (err != GLEW_OK) {
@@ -280,6 +287,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+
+    printf("DDDDD");
 
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(MessageCallback, 0);
@@ -295,6 +304,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
+    printf("EEEEE");
+
     EGLDisplay eglDisplay = eglGetDisplay((EGLNativeDisplayType)wlDisplay);
     if (eglDisplay == EGL_NO_DISPLAY) {
         printf("Unable to get EGL display\n");
@@ -305,6 +316,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
+    printf("FFFFF");
+
     if (!eglInitialize(eglDisplay, NULL, NULL)) {
         printf("Unable to initialize EGL\n");
         wl_display_disconnect(wlDisplay);
@@ -313,6 +326,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+
+    printf("GGGGG");
 
     EGLint attribs[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
@@ -336,6 +351,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
+    printf("HHHHH");
+
     eglContext = eglCreateContext(eglDisplay, config, EGL_NO_CONTEXT, NULL);
     if (eglContext == EGL_NO_CONTEXT) {
         printf("Unable to create EGL context\n");
@@ -346,6 +363,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+
+    printf("IIIII");
 
     EGLSurface eglSurface = eglCreateWindowSurface(eglDisplay, config, (EGLNativeWindowType)desktop_window, NULL);
     if (eglSurface == EGL_NO_SURFACE) {
@@ -359,6 +378,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
+    printf("JJJJJ");
+
     if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
         printf("Unable to make EGL context current\n");
         eglDestroySurface(eglDisplay, eglSurface);
@@ -370,6 +391,8 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+
+    printf("KKKKK");
 
     return true;
 }

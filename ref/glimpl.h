@@ -59,7 +59,7 @@ bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h);
 #endif
 
 #ifdef WAYLAND
-indow(struct wl_display*& wlDisplay, EGLContext& eglContext, int w, int h);
+bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int w, int h);
 #endif
 
 
