@@ -365,7 +365,7 @@ int init_openxr(XrExample* self)
 		},
 		0,
 		NULL,
-		enabled_ext_count,
+		(uint32_t)enabled_ext_count,
 		enabled_exts
 	};
 
