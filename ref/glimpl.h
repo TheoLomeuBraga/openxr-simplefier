@@ -55,7 +55,7 @@ bool init_sdl_window(HDC& xDisplay, HGLRC& glxContext, int w, int h);
 #endif
 
 #ifdef X11
-bool init_sdl_window(Display*& xDisplay, GLXDrawable& glxDrawable, int w, int h);
+bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h);
 #endif
 
 #ifdef WAYLAND

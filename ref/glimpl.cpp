@@ -104,7 +104,7 @@ bool init_sdl_window(HDC& xDisplay, HGLRC& glxContext, int w, int h) {
 
 #ifdef X11
 
-bool init_sdl_window(Display*& xDisplay, GLXDrawable& glxDrawable, int w, int h) {
+bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Unable to initialize SDL: %s\n", SDL_GetError());
         return false;
@@ -121,6 +121,7 @@ bool init_sdl_window(Display*& xDisplay, GLXDrawable& glxDrawable, int w, int h)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
+    /* Create our window centered at half the VR resolution */
     desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
         w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     if (!desktop_window) {
@@ -160,6 +161,7 @@ bool init_sdl_window(Display*& xDisplay, GLXDrawable& glxDrawable, int w, int h)
         return false;
     }
 
+    // Create an X window using the visual info
     int screen = DefaultScreen(xDisplay);
     int glxAttribs[] = {
         GLX_RGBA,
@@ -183,7 +185,7 @@ bool init_sdl_window(Display*& xDisplay, GLXDrawable& glxDrawable, int w, int h)
         return false;
     }
 
-    GLXContext glxContext = glXCreateContext(xDisplay, vi, NULL, GL_TRUE);
+    glxContext = glXCreateContext(xDisplay, vi, NULL, GL_TRUE);
     if (!glxContext) {
         printf("Unable to create GLX context\n");
         XFree(vi);
@@ -194,7 +196,6 @@ bool init_sdl_window(Display*& xDisplay, GLXDrawable& glxDrawable, int w, int h)
         return false;
     }
 
-    // Create an X window using the visual info
     Window root = RootWindow(xDisplay, vi->screen);
     XSetWindowAttributes swa;
     swa.colormap = XCreateColormap(xDisplay, root, vi->visual, AllocNone);
@@ -218,19 +219,6 @@ bool init_sdl_window(Display*& xDisplay, GLXDrawable& glxDrawable, int w, int h)
 
     if (!glXMakeCurrent(xDisplay, win, glxContext)) {
         printf("Unable to make GLX context current\n");
-        XDestroyWindow(xDisplay, win);
-        glXDestroyContext(xDisplay, glxContext);
-        XFree(vi);
-        XCloseDisplay(xDisplay);
-        SDL_GL_DeleteContext(gl_context);
-        SDL_DestroyWindow(desktop_window);
-        SDL_Quit();
-        return false;
-    }
-
-    glxDrawable = glXGetCurrentDrawable();
-    if (!glxDrawable) {
-        printf("Unable to get current GLX drawable\n");
         XDestroyWindow(xDisplay, win);
         glXDestroyContext(xDisplay, glxContext);
         XFree(vi);
