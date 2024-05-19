@@ -15,21 +15,5 @@ ifeq ($(OS),Linux)
 	#compile_command = g++ -o run $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader -DWAYLAND -lX11 -lopenvr_api
 endif
 
-all: 
-	$(compile_command)
-
-make_command_name = 
-ifeq ($(OS),Windows_NT)
-	make_command_name = mingw32-make
-endif
-ifeq ($(findstring MINGW,$(OS)),MINGW)
-	make_command_name = mingw32-make
-endif
-ifeq ($(OS),Linux)
-	make_command_name = make
-endif
-
-clear:
-	rm -f run run.exe
-	
-
+all:
+	echo aaaaa

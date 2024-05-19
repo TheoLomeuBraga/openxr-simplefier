@@ -31,9 +31,9 @@
 #include <iostream>
 #include <cstring>
 
-GLFWwindow *window = nullptr;
+GLFWwindow* window = nullptr;
 
-const void *GetGraphicsBinding()
+const void* GetGraphicsBinding()
 {
 #ifdef _WIN32
     XrGraphicsBindingOpenGLWin32KHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR};
@@ -46,7 +46,7 @@ const void *GetGraphicsBinding()
     XrGraphicsBindingOpenGLXlibKHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR};
     graphicsBinding.xDisplay = glfwGetX11Display();
     int fbCount;
-    GLXFBConfig *fbConfigs = glXGetFBConfigs(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay), &fbCount);
+    GLXFBConfig* fbConfigs = glXGetFBConfigs(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay), &fbCount);
     if (fbConfigs && fbCount > 0)
     {
         graphicsBinding.glxFBConfig = fbConfigs[0];
@@ -65,9 +65,9 @@ const void *GetGraphicsBinding()
 
 #ifdef WAYLAND
     XrGraphicsBindingOpenGLWaylandKHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR};
-    graphicsBinding.display = glfwGetWaylandDisplay();
-    graphicsBinding.eglSurface = glfwGetWaylandWindow(window);
-    graphicsBinding.eglContext = eglGetCurrentContext();
+    graphicsBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR;
+    graphicsBinding.next = nullptr;
+    graphicsBinding.display = (struct wl_display*)glfwGetWaylandDisplay();
     return &graphicsBinding;
 #endif
     return nullptr;
@@ -95,41 +95,37 @@ void SetupOpenXR()
 int main()
 {
     // Initialize GLFW
-    if (!glfwInit())
-    {
+    if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
 
-
-
-    glfwWindowHint(GLFW_SAMPLES, 4);               // 4x antialiasing
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
+    // Set GLFW window hints for OpenGL version and profile
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);           // To make MacOS happy; should not be needed
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Open a window and create its OpenGL context
-    GLFWwindow *window; // (In the accompanying source code, this variable is global for simplicity)
-    window = glfwCreateWindow(1024, 768, "Tutorial 01", NULL, NULL);
-    if (window == NULL)
-    {
-        fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
+    // Create a GLFW window
+    GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Window", NULL, NULL);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
-    glfwMakeContextCurrent(window); // Initialize GLEW
-    glewExperimental = true;        // Needed in core profile
-    if (glewInit() != GLEW_OK)
-    {
-        fprintf(stderr, "Failed to initialize GLEW\n");
+    glfwMakeContextCurrent(window);
+
+    // Initialize GLEW
+    glewExperimental = GL_TRUE; // Ensure GLEW uses modern techniques for managing OpenGL functionality
+    GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW: " << glewGetErrorString(err) << std::endl;
+        glfwDestroyWindow(window);
+        glfwTerminate();
         return -1;
     }
 
-    // Initialize GLEW
-
     // Compile the vertex shader
-    const GLchar *vertexSource =
+    const GLchar* vertexSource =
         R"glsl(
         #version 150 core
         in vec2 position;
@@ -153,7 +149,7 @@ int main()
     }
 
     // Compile the fragment shader
-    const GLchar *fragmentSource =
+    const GLchar* fragmentSource =
         R"glsl(
         #version 150 core
         out vec4 outColor;
@@ -206,7 +202,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -230,7 +226,12 @@ int main()
         glBindVertexArray(0);
 
         // Submit frame to OpenXR
-        const void *graphicsBinding = GetGraphicsBinding();
+        const void* graphicsBinding = GetGraphicsBinding();
+        if (graphicsBinding == nullptr)
+        {
+            std::cerr << "Failed to get graphics binding" << std::endl;
+            break;
+        }
         // Use graphicsBinding with OpenXR to submit frame...
 
         // Swap the buffers
