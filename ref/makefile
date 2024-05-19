@@ -11,8 +11,8 @@ ifeq ($(findstring MINGW,$(OS)),MINGW)
 	compile_command = g++ -o run.exe glimpl.cpp $(core_file) -IC:/msys64/mingw64/include -LC:/msys64/mingw64/lib -lglew32 -lglfw3 -lopenxr_loader -lopengl32 -lgdi32 -lopenvr_api `sdl2-config --cflags --libs`
 endif
 ifeq ($(OS),Linux)
-	compile_command = g++ -o run glimpl.cpp $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader -lX11 -lopenvr_api `sdl2-config --cflags --libs`
-	#compile_command = g++ -o run glimpl.cpp $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader -DWAYLAND -lX11 -lopenvr_api `sdl2-config --cflags --libs`
+	#compile_command = g++ -o run glimpl.cpp $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader  -lopenvr_api -lX11 `sdl2-config --cflags --libs` -DX11
+	compile_command = g++ -o run glimpl.cpp $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader  -lopenvr_api -lwayland-client -lwayland-egl -lEGL `sdl2-config --cflags --libs` -DWAYLAND
 endif
 
 all: 

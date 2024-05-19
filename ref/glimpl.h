@@ -9,9 +9,12 @@
 #ifndef GLIMPL
 #define GLIMPL
 
+
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
+
+
 
 #define NO_SDL_GLEXT
 #include <GL/glew.h>
@@ -20,20 +23,45 @@
 
 #include "xrmath.h"
 
+
+
 #ifdef _WIN32
 #define XR_USE_PLATFORM_WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GL/gl.h>
+#include <GL/wglext.h>
 #endif
+
+#ifdef X11
+#define XR_USE_PLATFORM_XLIB
+#define GLFW_EXPOSE_NATIVE_X11
+#include <GL/glx.h>
+#endif
+
+#ifdef WAYLAND
+#define XR_USE_PLATFORM_WAYLAND
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#include <EGL/egl.h>
+#include <wayland-client.h>
+#endif
+
+
 #define XR_USE_GRAPHICS_API_OPENGL
 #include "openxr/openxr.h"
 #include "openxr/openxr_platform.h"
 
 #ifdef _WIN32
-bool
-init_sdl_window(HDC& xDisplay, HGLRC& glxContext,
-                int w,
-                int h);
-
+bool init_sdl_window(HDC& xDisplay, HGLRC& glxContext, int w, int h);
 #endif
+
+#ifdef X11
+bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h);
+#endif
+
+#ifdef WAYLAND
+bool init_sdl_window(wl_display*& wlDisplay, EGLContext& eglContext, int w, int h);
+#endif
+
 
 int
 init_gl();

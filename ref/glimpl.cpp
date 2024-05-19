@@ -65,49 +65,144 @@ MessageCallback(GLenum source,
 }
 
 #ifdef _WIN32
-bool
-init_sdl_window(HDC& xDisplay, HGLRC& glxContext,
-				int w,
-				int h)
-{
+bool init_sdl_window(HDC& xDisplay, HGLRC& glxContext, int w, int h) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("Unable to initialize SDL");
+        return false;
+    }
 
-	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-		printf("Unable to initialize SDL");
-		return false;
-	}
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    /* Create our window centered at half the VR resolution */
+    desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+        w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    if (!desktop_window) {
+        printf("Unable to create window");
+        return false;
+    }
 
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
+    gl_context = SDL_GL_CreateContext(desktop_window);
+    auto err = glewInit();
 
-	/* Create our window centered at half the VR resolution */
-	desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-		w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-	if (!desktop_window) {
-		printf("Unable to create window");
-		return false;
-	}
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(MessageCallback, 0);
 
-	gl_context = SDL_GL_CreateContext(desktop_window);
-	auto err = glewInit();
+    SDL_GL_SetSwapInterval(0);
 
-	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(MessageCallback, 0);
+    // HACK? OpenXR wants us to report these values, so "work around" SDL a
+    // bit and get the underlying glx stuff. Does this still work when e.g.
+    // SDL switches to xcb?
+    xDisplay = wglGetCurrentDC();
+    glxContext = wglGetCurrentContext();
 
-	SDL_GL_SetSwapInterval(0);
-
-
-	// HACK? OpenXR wants us to report these values, so "work around" SDL a
-	// bit and get the underlying glx stuff. Does this still work when e.g.
-	// SDL switches to xcb?
-	xDisplay = wglGetCurrentDC();
-	glxContext = wglGetCurrentContext();
-
-	return true;
+    return true;
 }
 #endif
+
+#ifdef X11
+bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("Unable to initialize SDL");
+        return false;
+    }
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
+
+    desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+        w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    if (!desktop_window) {
+        printf("Unable to create window");
+        return false;
+    }
+
+    gl_context = SDL_GL_CreateContext(desktop_window);
+    auto err = glewInit();
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(MessageCallback, 0);
+
+    SDL_GL_SetSwapInterval(0);
+
+    xDisplay = XOpenDisplay(NULL);
+    glxContext = glXGetCurrentContext();
+
+    return true;
+}
+#endif
+
+#ifdef WAYLAND
+
+bool init_sdl_window(wl_display*& wlDisplay, EGLContext& eglContext, int w, int h) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("Unable to initialize SDL: %s\n", SDL_GetError());
+        return false;
+    }
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+    desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+        w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    if (!desktop_window) {
+        printf("Unable to create window: %s\n", SDL_GetError());
+        SDL_Quit();
+        return false;
+    }
+
+    gl_context = SDL_GL_CreateContext(desktop_window);
+    if (!gl_context) {
+        printf("Unable to create OpenGL context: %s\n", SDL_GetError());
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        printf("GLEW initialization failed: %s\n", glewGetErrorString(err));
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(MessageCallback, 0);
+
+    SDL_GL_SetSwapInterval(0);
+
+    wlDisplay = wl_display_connect(NULL);
+    if (!wlDisplay) {
+        printf("Unable to connect to Wayland display\n");
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    eglContext = eglGetCurrentContext();
+    if (eglContext == EGL_NO_CONTEXT) {
+        printf("Unable to get current EGL context\n");
+        wl_display_disconnect(wlDisplay);
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    return true;
+}
+#endif
+
+
 
 int
 init_gl()
