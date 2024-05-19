@@ -264,7 +264,7 @@ void print_viewconfig_view_info(XrExample *self)
 
 bool check_opengl_version(XrGraphicsRequirementsOpenGLKHR *opengl_reqs)
 {
-	XrVersion desired_opengl_version = XR_MAKE_VERSION(3, 3, 0);
+	XrVersion desired_opengl_version = XR_MAKE_VERSION(4, 3, 0);
 	if (desired_opengl_version > opengl_reqs->maxApiVersionSupported ||
 		desired_opengl_version < opengl_reqs->minApiVersionSupported)
 	{
@@ -508,6 +508,8 @@ int init_openxr(XrExample *self)
 		return 1;
 	}
 
+#endif
+
 #ifdef X11
 	self->graphics_binding_gl = XrGraphicsBindingOpenGLXlibKHR{
 		.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR,
@@ -515,7 +517,7 @@ int init_openxr(XrExample *self)
 
 	// create SDL window the size of the left eye & fill GL graphics binding info
 
-	if (!init_sdl_window(self->graphics_binding_gl.display, self->graphics_binding_gl.glxDrawable,
+	if (!init_sdl_window(self->graphics_binding_gl.xDisplay, self->graphics_binding_gl.glxDrawable,
 						 self->viewconfig_views[0].recommendedImageRectWidth,
 						 self->viewconfig_views[0].recommendedImageRectHeight))
 	{
@@ -540,7 +542,7 @@ int init_openxr(XrExample *self)
 	}
 #endif
 
-#endif
+
 
 	printf("Using OpenGL version: %s\n", glGetString(GL_VERSION));
 	printf("Using OpenGL Renderer: %s\n", glGetString(GL_RENDERER));
