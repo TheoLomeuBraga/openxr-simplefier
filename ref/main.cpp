@@ -511,17 +511,18 @@ int init_openxr(XrExample *self)
 #endif
 
 #ifdef X11
-self->graphics_binding_gl = XrGraphicsBindingOpenGLXlibKHR{
-    .type = XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR,
-};
+	self->graphics_binding_gl = XrGraphicsBindingOpenGLXlibKHR{
+		.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR,
+	};
 
-// create SDL window the size of the left eye & fill GL graphics binding info
-if (!init_sdl_window(self->graphics_binding_gl.xDisplay, self->graphics_binding_gl.glxContext,
-                     self->viewconfig_views[0].recommendedImageRectWidth,
-                     self->viewconfig_views[0].recommendedImageRectHeight)) {
-    printf("X11 init failed!\n");
-    return 1;
-}
+	// create SDL window the size of the left eye & fill GL graphics binding info
+	if (!init_sdl_window(self->graphics_binding_gl.xDisplay, self->graphics_binding_gl.glxContext,
+						 self->viewconfig_views[0].recommendedImageRectWidth,
+						 self->viewconfig_views[0].recommendedImageRectHeight))
+	{
+		printf("X11 init failed!\n");
+		return 1;
+	}
 #endif
 
 #ifdef WAYLAND
@@ -530,8 +531,7 @@ if (!init_sdl_window(self->graphics_binding_gl.xDisplay, self->graphics_binding_
 	};
 
 	// create SDL window the size of the left eye & fill GL graphics binding info
-
-	if (!init_sdl_window(self->graphics_binding_gl.display, self->graphics_binding_gl.eglSurface,
+	if (!init_sdl_window(self->graphics_binding_gl.display, *(EGLContext*)self->graphics_binding_gl.next,
 						 self->viewconfig_views[0].recommendedImageRectWidth,
 						 self->viewconfig_views[0].recommendedImageRectHeight))
 	{
@@ -539,8 +539,6 @@ if (!init_sdl_window(self->graphics_binding_gl.xDisplay, self->graphics_binding_
 		return 1;
 	}
 #endif
-
-
 
 	printf("Using OpenGL version: %s\n", glGetString(GL_VERSION));
 	printf("Using OpenGL Renderer: %s\n", glGetString(GL_RENDERER));

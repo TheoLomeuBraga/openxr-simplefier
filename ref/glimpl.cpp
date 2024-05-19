@@ -238,7 +238,7 @@ bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h) {
 
 #ifdef WAYLAND
 
-bool init_sdl_window(wl_display*& wlDisplay, EGLContext& eglContext, int w, int h) {
+bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int w, int h) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Unable to initialize SDL: %s\n", SDL_GetError());
         return false;
@@ -246,9 +246,16 @@ bool init_sdl_window(wl_display*& wlDisplay, EGLContext& eglContext, int w, int 
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
+    /* Create our window centered at half the VR resolution */
     desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
         w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     if (!desktop_window) {
@@ -288,9 +295,75 @@ bool init_sdl_window(wl_display*& wlDisplay, EGLContext& eglContext, int w, int 
         return false;
     }
 
-    eglContext = eglGetCurrentContext();
+    EGLDisplay eglDisplay = eglGetDisplay((EGLNativeDisplayType)wlDisplay);
+    if (eglDisplay == EGL_NO_DISPLAY) {
+        printf("Unable to get EGL display\n");
+        wl_display_disconnect(wlDisplay);
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    if (!eglInitialize(eglDisplay, NULL, NULL)) {
+        printf("Unable to initialize EGL\n");
+        wl_display_disconnect(wlDisplay);
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    EGLint attribs[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 24,
+        EGL_STENCIL_SIZE, 8,
+        EGL_NONE
+    };
+    EGLConfig config;
+    EGLint numConfigs;
+    if (!eglChooseConfig(eglDisplay, attribs, &config, 1, &numConfigs) || numConfigs < 1) {
+        printf("Unable to choose EGL config\n");
+        eglTerminate(eglDisplay);
+        wl_display_disconnect(wlDisplay);
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    eglContext = eglCreateContext(eglDisplay, config, EGL_NO_CONTEXT, NULL);
     if (eglContext == EGL_NO_CONTEXT) {
-        printf("Unable to get current EGL context\n");
+        printf("Unable to create EGL context\n");
+        eglTerminate(eglDisplay);
+        wl_display_disconnect(wlDisplay);
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    EGLSurface eglSurface = eglCreateWindowSurface(eglDisplay, config, (EGLNativeWindowType)desktop_window, NULL);
+    if (eglSurface == EGL_NO_SURFACE) {
+        printf("Unable to create EGL surface\n");
+        eglDestroyContext(eglDisplay, eglContext);
+        eglTerminate(eglDisplay);
+        wl_display_disconnect(wlDisplay);
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
+
+    if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
+        printf("Unable to make EGL context current\n");
+        eglDestroySurface(eglDisplay, eglSurface);
+        eglDestroyContext(eglDisplay, eglContext);
+        eglTerminate(eglDisplay);
         wl_display_disconnect(wlDisplay);
         SDL_GL_DeleteContext(gl_context);
         SDL_DestroyWindow(desktop_window);
@@ -300,6 +373,7 @@ bool init_sdl_window(wl_display*& wlDisplay, EGLContext& eglContext, int w, int 
 
     return true;
 }
+
 #endif
 
 
