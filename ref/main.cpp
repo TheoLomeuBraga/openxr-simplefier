@@ -18,9 +18,12 @@
 
 #include "glimpl.h" // factored out rendering of a simple scene
 
+
 // OpenXR Header and defination
-#define XR_USE_GRAPHICS_API_OPENGL
+#ifdef _WIN32
 #define XR_USE_PLATFORM_WIN32
+#endif
+#define XR_USE_GRAPHICS_API_OPENGL
 #include "openxr/openxr.h"
 
 #include "xrmath.h" // math glue between OpenXR and OpenGL
@@ -78,7 +81,9 @@ public:
 	std::vector<XrView> views;
 
 	// The runtime interacts with the OpenGL images (textures) via a Swapchain.
+	#ifdef _WIN32
 	XrGraphicsBindingOpenGLWin32KHR graphics_binding_gl;
+	#endif
 
 	int64_t swapchain_format;
 	// one array of images per view.
@@ -452,15 +457,18 @@ int init_openxr(XrExample* self)
 
 
 	// --- Create session
+	#ifdef _WIN32
 	self->graphics_binding_gl = XrGraphicsBindingOpenGLWin32KHR{ .type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR, };
 
 	// create SDL window the size of the left eye & fill GL graphics binding info
+	
 	if (!init_sdl_window(self->graphics_binding_gl.hDC, self->graphics_binding_gl.hGLRC,
 						 self->viewconfig_views[0].recommendedImageRectWidth,
 						 self->viewconfig_views[0].recommendedImageRectHeight)) {
 		printf("GLX init failed!\n");
 		return 1;
 	}
+	#endif
 
 	printf("Using OpenGL version: %s\n", glGetString(GL_VERSION));
 	printf("Using OpenGL Renderer: %s\n", glGetString(GL_RENDERER));

@@ -64,6 +64,7 @@ MessageCallback(GLenum source,
 			(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type, severity, message);
 }
 
+#ifdef _WIN32
 bool
 init_sdl_window(HDC& xDisplay, HGLRC& glxContext,
 				int w,
@@ -106,6 +107,7 @@ init_sdl_window(HDC& xDisplay, HGLRC& glxContext,
 
 	return true;
 }
+#endif
 
 int
 init_gl()
