@@ -9,7 +9,9 @@
 #ifndef GLIMPL
 #define GLIMPL
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 #define NO_SDL_GLEXT
 #include <GL/glew.h>
@@ -18,15 +20,20 @@
 
 #include "xrmath.h"
 
+#ifdef _WIN32
 #define XR_USE_PLATFORM_WIN32
+#endif
 #define XR_USE_GRAPHICS_API_OPENGL
 #include "openxr/openxr.h"
 #include "openxr/openxr_platform.h"
 
+#ifdef _WIN32
 bool
 init_sdl_window(HDC& xDisplay, HGLRC& glxContext,
                 int w,
                 int h);
+
+#endif
 
 int
 init_gl();
