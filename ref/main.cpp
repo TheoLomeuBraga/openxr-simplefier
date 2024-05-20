@@ -549,7 +549,7 @@ int init_openxr(XrExample *self)
 	printf("Using OpenGL Renderer: %s\n", glGetString(GL_RENDERER));
 
 	// Set up rendering (compile shaders, ...)
-	if (init_gl() != 0)
+	if (!init_gl())
 	{
 		printf("OpenGl setup failed!\n");
 		return 1;
