@@ -238,15 +238,14 @@ bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h) {
 
 #ifdef WAYLAND
 
-bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int w, int h) {
-    printf("00000");
+bool init_sdl_window(struct wl_display*& wlDisplay, EGLDisplay& eglDisplay, EGLContext& eglContext, EGLSurface& eglSurface, int w, int h) {
+    printf("Initializing SDL...\n");
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Unable to initialize SDL: %s\n", SDL_GetError());
         return false;
     }
 
-    printf("AAAAA");
-
+    printf("Setting SDL GL attributes...\n");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -258,7 +257,7 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-    /* Create our window centered at half the VR resolution */
+    printf("Creating SDL window...\n");
     desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
         w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     if (!desktop_window) {
@@ -267,8 +266,7 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
-    printf("BBBBB");
-
+    printf("Creating SDL GL context...\n");
     gl_context = SDL_GL_CreateContext(desktop_window);
     if (!gl_context) {
         printf("Unable to create OpenGL context: %s\n", SDL_GetError());
@@ -277,8 +275,16 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
-    printf("CCCCC");
+    printf("Making GL context current...\n");
+    if (SDL_GL_MakeCurrent(desktop_window, gl_context) != 0) {
+        printf("Unable to make GL context current: %s\n", SDL_GetError());
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(desktop_window);
+        SDL_Quit();
+        return false;
+    }
 
+    printf("Initializing GLEW...\n");
     GLenum err = glewInit();
     if (err != GLEW_OK) {
         printf("GLEW initialization failed: %s\n", glewGetErrorString(err));
@@ -288,13 +294,13 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         return false;
     }
 
-    printf("DDDDD");
-
+    printf("Enabling GL debug output...\n");
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(MessageCallback, 0);
 
     SDL_GL_SetSwapInterval(0);
 
+    printf("Connecting to Wayland display...\n");
     wlDisplay = wl_display_connect(NULL);
     if (!wlDisplay) {
         printf("Unable to connect to Wayland display\n");
@@ -303,10 +309,10 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+    printf("Wayland display connected: %p\n", wlDisplay);
 
-    printf("EEEEE");
-
-    EGLDisplay eglDisplay = eglGetDisplay((EGLNativeDisplayType)wlDisplay);
+    printf("Getting EGL display...\n");
+    eglDisplay = eglGetDisplay((EGLNativeDisplayType)wlDisplay);
     if (eglDisplay == EGL_NO_DISPLAY) {
         printf("Unable to get EGL display\n");
         wl_display_disconnect(wlDisplay);
@@ -315,22 +321,23 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+    printf("EGL display obtained: %p\n", eglDisplay);
 
-    printf("FFFFF");
-
+    printf("Initializing EGL...\n");
     if (!eglInitialize(eglDisplay, NULL, NULL)) {
         printf("Unable to initialize EGL\n");
+        eglTerminate(eglDisplay);
         wl_display_disconnect(wlDisplay);
         SDL_GL_DeleteContext(gl_context);
         SDL_DestroyWindow(desktop_window);
         SDL_Quit();
         return false;
     }
+    printf("EGL initialized\n");
 
-    printf("GGGGG");
-
-    EGLint attribs[] = {
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+    EGLint eglAttributes[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
@@ -339,9 +346,11 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         EGL_STENCIL_SIZE, 8,
         EGL_NONE
     };
-    EGLConfig config;
+
+    printf("Choosing EGL config...\n");
+    EGLConfig eglConfig;
     EGLint numConfigs;
-    if (!eglChooseConfig(eglDisplay, attribs, &config, 1, &numConfigs) || numConfigs < 1) {
+    if (!eglChooseConfig(eglDisplay, eglAttributes, &eglConfig, 1, &numConfigs) || numConfigs != 1) {
         printf("Unable to choose EGL config\n");
         eglTerminate(eglDisplay);
         wl_display_disconnect(wlDisplay);
@@ -350,12 +359,19 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+    printf("EGL config chosen\n");
 
-    printf("HHHHH");
-
-    eglContext = eglCreateContext(eglDisplay, config, EGL_NO_CONTEXT, NULL);
+    printf("Creating EGL context...\n");
+    EGLint contextAttributes[] = {
+        EGL_CONTEXT_MAJOR_VERSION, 4,
+        EGL_CONTEXT_MINOR_VERSION, 3,
+        EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT,
+        EGL_NONE
+    };
+    eglContext = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttributes);
     if (eglContext == EGL_NO_CONTEXT) {
-        printf("Unable to create EGL context\n");
+        EGLint error = eglGetError();
+        printf("Unable to create EGL context: %d\n", error);
         eglTerminate(eglDisplay);
         wl_display_disconnect(wlDisplay);
         SDL_GL_DeleteContext(gl_context);
@@ -363,12 +379,13 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+    printf("EGL context created\n");
 
-    printf("IIIII");
-
-    EGLSurface eglSurface = eglCreateWindowSurface(eglDisplay, config, (EGLNativeWindowType)desktop_window, NULL);
+    printf("Creating EGL window surface...\n");
+    eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig, (EGLNativeWindowType)desktop_window, NULL);
     if (eglSurface == EGL_NO_SURFACE) {
-        printf("Unable to create EGL surface\n");
+        EGLint error = eglGetError();
+        printf("Unable to create EGL window surface: %d\n", error);
         eglDestroyContext(eglDisplay, eglContext);
         eglTerminate(eglDisplay);
         wl_display_disconnect(wlDisplay);
@@ -377,11 +394,12 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+    printf("EGL window surface created\n");
 
-    printf("JJJJJ");
-
+    printf("Making EGL context current...\n");
     if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
-        printf("Unable to make EGL context current\n");
+        EGLint error = eglGetError();
+        printf("Unable to make EGL context current: %d\n", error);
         eglDestroySurface(eglDisplay, eglSurface);
         eglDestroyContext(eglDisplay, eglContext);
         eglTerminate(eglDisplay);
@@ -391,11 +409,12 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLContext& eglContext, int 
         SDL_Quit();
         return false;
     }
+    printf("EGL context made current\n");
 
-    printf("KKKKK");
-
+    printf("Initialization successful!\n");
     return true;
 }
+
 
 #endif
 

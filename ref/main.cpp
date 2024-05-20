@@ -526,12 +526,17 @@ int init_openxr(XrExample *self)
 #endif
 
 #ifdef WAYLAND
-	self->graphics_binding_gl = XrGraphicsBindingOpenGLWaylandKHR{
+	XrGraphicsBindingOpenGLWaylandKHR graphics_binding_gl = {
 		.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR,
+		.next = nullptr,
+		.display = nullptr,
 	};
 
-	// create SDL window the size of the left eye & fill GL graphics binding info
-	if (!init_sdl_window(self->graphics_binding_gl.display, *(EGLContext*)self->graphics_binding_gl.next,
+	EGLDisplay eglDisplay;
+	EGLContext eglContext;
+	EGLSurface eglSurface;
+
+	if (!init_sdl_window(graphics_binding_gl.display, eglDisplay, eglContext, eglSurface,
 						 self->viewconfig_views[0].recommendedImageRectWidth,
 						 self->viewconfig_views[0].recommendedImageRectHeight))
 	{
