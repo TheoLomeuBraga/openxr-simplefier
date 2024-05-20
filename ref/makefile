@@ -4,7 +4,7 @@ OS := $(shell uname -s)
 core_file = main.cpp
 
 xorg_stuf = -lX11 -DX11
-wayland_stuf = $(-lwayland-egl -lGLEW -lEGL -lGLESv2)
+wayland_stuf = -lwayland-egl -lGLEW -lEGL -lGLESv2
 
 compile_command = 
 ifeq ($(OS),Windows_NT)
@@ -15,7 +15,7 @@ ifeq ($(findstring MINGW,$(OS)),MINGW)
 endif
 ifeq ($(OS),Linux)
 	#compile_command = g++ -o run glimpl.cpp $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader $(xorg_stuf) -lopenvr_api -lX11 `sdl2-config --cflags --libs` 
-	compile_command = g++ -o run glimpl.cpp $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader  -lopenvr_api -lwayland-client $(wayland_stuf) -lEGL `sdl2-config --cflags --libs` -DWAYLAND
+	compile_command = g++ -o run glimpl.cpp $(core_file) -lGL -lGLEW -lglfw -lopenxr_loader  $(wayland_stuf)  -lopenvr_api -lwayland-client -lEGL `sdl2-config --cflags --libs` -DWAYLAND
 
 	#SDL_VIDEODRIVER=wayland
 

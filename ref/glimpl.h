@@ -41,7 +41,9 @@
 #ifdef WAYLAND
 #define XR_USE_PLATFORM_WAYLAND
 #define GLFW_EXPOSE_NATIVE_WAYLAND
+#include <SDL2/SDL_syswm.h>
 #include <EGL/egl.h>
+#include <wayland-egl.h>
 #include <wayland-client.h>
 #endif
 
