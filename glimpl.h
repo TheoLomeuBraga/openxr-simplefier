@@ -38,14 +38,6 @@
 #include <GL/glx.h>
 #endif
 
-#ifdef WAYLAND
-#define XR_USE_PLATFORM_WAYLAND
-#define GLFW_EXPOSE_NATIVE_WAYLAND
-#include <SDL2/SDL_syswm.h>
-#include <EGL/egl.h>
-#include <wayland-egl.h>
-#include <wayland-client.h>
-#endif
 
 
 #define XR_USE_GRAPHICS_API_OPENGL
@@ -60,9 +52,7 @@ bool init_sdl_window(HDC& xDisplay, HGLRC& glxContext, int w, int h);
 bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h);
 #endif
 
-#ifdef WAYLAND
-bool init_sdl_window(struct wl_display*& wlDisplay, EGLDisplay& eglDisplay, EGLContext& eglContext, EGLSurface& eglSurface, int w, int h);
-#endif
+
 
 
 int

@@ -29,10 +29,6 @@
 #define GLFW_EXPOSE_NATIVE_X11
 #endif
 
-#ifdef WAYLAND
-#define XR_USE_PLATFORM_WAYLAND
-#define GLFW_EXPOSE_NATIVE_WAYLAND
-#endif
 
 #define XR_USE_GRAPHICS_API_OPENGL
 #include "openxr/openxr.h"
@@ -97,9 +93,6 @@ public:
 #endif
 #ifdef X11
 	XrGraphicsBindingOpenGLXlibKHR graphics_binding_gl;
-#endif
-#ifdef WAYLAND
-	XrGraphicsBindingOpenGLWaylandKHR graphics_binding_gl;
 #endif
 
 	int64_t swapchain_format;
@@ -525,25 +518,7 @@ int init_openxr(XrExample *self)
 	}
 #endif
 
-#ifdef WAYLAND
-	XrGraphicsBindingOpenGLWaylandKHR graphics_binding_gl = {
-		.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR,
-		.next = nullptr,
-		.display = nullptr,
-	};
 
-	EGLDisplay eglDisplay;
-	EGLContext eglContext;
-	EGLSurface eglSurface;
-
-	if (!init_sdl_window(graphics_binding_gl.display, eglDisplay, eglContext, eglSurface,
-						 self->viewconfig_views[0].recommendedImageRectWidth,
-						 self->viewconfig_views[0].recommendedImageRectHeight))
-	{
-		printf("Wayland init failed!\n");
-		return 1;
-	}
-#endif
 
 	printf("Using OpenGL version: %s\n", glGetString(GL_VERSION));
 	printf("Using OpenGL Renderer: %s\n", glGetString(GL_RENDERER));

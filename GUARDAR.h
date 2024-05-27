@@ -16,22 +16,7 @@
 #define XR_USE_GRAPHICS_API_OPENGL
 #endif
 
-/*
-#ifdef WAYLAND
-#include <wayland-client.h>
-#include <wayland-egl.h>
-#define XR_USE_PLATFORM_WAYLAND
-#define XR_USE_GRAPHICS_API_OPENGL
-#define GLFW_EXPOSE_NATIVE_WAYLAND
-#endif
-*/
-#ifdef WAYLAND
-#include <EGL/egl.h>
-#include <wayland-client.h>
-#define XR_USE_PLATFORM_WAYLAND
-#define XR_USE_GRAPHICS_API_OPENGL
-#define GLFW_EXPOSE_NATIVE_WAYLAND
-#endif
+
 
 
 #include <GLFW/glfw3.h>
@@ -70,14 +55,6 @@ const void* GetGraphicsBinding()
     graphicsBinding.visualid = XVisualIDFromVisual(DefaultVisual(graphicsBinding.xDisplay, DefaultScreen(graphicsBinding.xDisplay)));
     graphicsBinding.glxDrawable = glfwGetX11Window(window);
     graphicsBinding.glxContext = glXGetCurrentContext();
-    return &graphicsBinding;
-#endif
-
-#ifdef WAYLAND
-    XrGraphicsBindingOpenGLWaylandKHR graphicsBinding = {XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR};
-    graphicsBinding.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR;
-    graphicsBinding.next = nullptr;
-    graphicsBinding.display = (struct wl_display*)glfwGetWaylandDisplay();
     return &graphicsBinding;
 #endif
     return nullptr;
