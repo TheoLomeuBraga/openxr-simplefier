@@ -22,31 +22,31 @@ GLuint shaderProgramID = 0;
 GLuint VAOs[1] = {0};
 
 static const char* vertexshader =
-	"#version 330 core\n"
-	"#extension GL_ARB_explicit_uniform_location : require\n"
-	"layout(location = 0) in vec3 aPos;\n"
-	"layout(location = 2) uniform mat4 model;\n"
-	"layout(location = 3) uniform mat4 view;\n"
-	"layout(location = 4) uniform mat4 proj;\n"
-	"layout(location = 5) in vec2 aColor;\n"
-	"out vec2 vertexColor;\n"
-	"void main() {\n"
-	"	gl_Position = proj * view * model * vec4(aPos.x, aPos.y, aPos.z, "
-	"1.0);\n"
-	"	vertexColor = aColor;\n"
-	"}\n";
+    "#version 300 es\n"
+    "in vec3 aPos;\n"
+    "uniform mat4 model;\n"
+    "uniform mat4 view;\n"
+    "uniform mat4 proj;\n"
+    "in vec2 aColor;\n"
+    "out vec2 vertexColor;\n"
+    "void main() {\n"
+    "    gl_Position = proj * view * model * vec4(aPos, 1.0);\n"
+    "    vertexColor = aColor;\n"
+    "}\n";
+
+
 
 static const char* fragmentshader =
-	"#version 330 core\n"
-	"#extension GL_ARB_explicit_uniform_location : require\n"
-	"layout(location = 0) out vec4 FragColor;\n"
-	"layout(location = 1) uniform vec3 uniformColor;\n"
-	"in vec2 vertexColor;\n"
-	"void main() {\n"
-	"	FragColor = (uniformColor.x < 0.01 && uniformColor.y < 0.01 && "
-	"uniformColor.z < 0.01) ? vec4(vertexColor, 1.0, 1.0) : vec4(uniformColor, "
-	"1.0);\n"
-	"}\n";
+    "#version 300 es\n"
+    "precision mediump float;\n"
+    "out vec4 FragColor;\n"
+    "uniform vec3 uniformColor;\n"
+    "in vec2 vertexColor;\n"
+    "void main() {\n"
+    "    FragColor = (uniformColor.x < 0.01 && uniformColor.y < 0.01 && uniformColor.z < 0.01) ? vec4(vertexColor, 1.0, 1.0) : vec4(uniformColor, 1.0);\n"
+    "}\n";
+
+
 
 static SDL_Window* desktop_window;
 static SDL_GLContext gl_context;
@@ -71,8 +71,9 @@ bool init_sdl_window(HDC& xDisplay, HGLRC& glxContext, int w, int h) {
         return false;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
@@ -110,8 +111,9 @@ bool init_sdl_window(Display*& xDisplay, GLXContext& glxContext, int w, int h) {
         return false;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
@@ -238,8 +240,9 @@ bool init_sdl_window(struct wl_display*& wlDisplay, EGLDisplay& eglDisplay, EGLC
         return false;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
