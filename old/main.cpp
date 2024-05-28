@@ -30,7 +30,7 @@
 #endif
 
 
-#define XR_USE_GRAPHICS_API_OPENGL
+#define XR_USE_GRAPHICS_API_OPENGL_ES
 #include "openxr/openxr.h"
 
 #include "xrmath.h" // math glue between OpenXR and OpenGL
