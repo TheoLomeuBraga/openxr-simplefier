@@ -5,29 +5,6 @@
 GLuint shaderProgramID = 0;
 GLuint VAOs[1] = {0};
 
-static const char *vertexshader =
-	"#version 300 es\n"
-	"in vec3 aPos;\n"
-	"uniform mat4 model;\n"
-	"uniform mat4 view;\n"
-	"uniform mat4 proj;\n"
-	"in vec2 aColor;\n"
-	"out vec2 vertexColor;\n"
-	"void main() {\n"
-	"    gl_Position = proj * view * model * vec4(aPos, 1.0);\n"
-	"    vertexColor = aColor;\n"
-	"}\n";
-
-static const char *fragmentshader =
-	"#version 300 es\n"
-	"precision mediump float;\n"
-	"out vec4 FragColor;\n"
-	"uniform vec3 uniformColor;\n"
-	"in vec2 vertexColor;\n"
-	"void main() {\n"
-	"    FragColor = (uniformColor.x < 0.01 && uniformColor.y < 0.01 && uniformColor.z < 0.01) ? vec4(vertexColor, 1.0, 1.0) : vec4(uniformColor, 1.0);\n"
-	"}\n";
-
 static SDL_Window *desktop_window;
 static SDL_GLContext gl_context;
 
@@ -1036,6 +1013,12 @@ void start_vr(void(start_render)(void))
 			self.projection_views[i].next = &self.depth.infos[i];
 		};
 	}
+}
+
+bool continue_vr = true;
+
+void stop_vr(){
+	continue_vr = false;
 }
 
 void update_vr(void(before_render)(void),void(update_render)(glm::mat4,glm::mat4),void(after_render)(void))
