@@ -1038,8 +1038,13 @@ void start_vr(void(start_render)(void))
 	}
 }
 
-void update_vr(void(update_render)(glm::mat4, glm::mat4))
+void update_vr(void(before_render)(void),void(update_render)(glm::mat4,glm::mat4),void(after_render)(void))
 {
+	before_render();
+
+	
+
+	after_render();
 }
 
 XrHandJointLocationsEXT *get_joints_infos()
