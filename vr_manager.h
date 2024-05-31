@@ -33,5 +33,5 @@ void update_vr(void(update_render)(glm::mat4,glm::mat4));
 
 XrHandJointLocationsEXT *get_joints_infos();
 
-void end_vr(void(end_render)(void));
+void end_vr(void(clean_render)(void));
 
