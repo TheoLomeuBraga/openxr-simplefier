@@ -1030,7 +1030,16 @@ void update_vr(void(before_render)(void),void(update_render)(glm::mat4,glm::mat4
 	after_render();
 }
 
-XrHandJointLocationsEXT *get_joints_infos()
+vr_pose get_vr_traker_pose(vr_traker_type traker){
+	vr_pose ret;
+	return ret;
+}
+
+float get_vr_action(vr_action action){
+    return 0;
+}
+
+XrHandJointLocationsEXT *get_vr_joints_infos()
 {
 	return NULL;
 };

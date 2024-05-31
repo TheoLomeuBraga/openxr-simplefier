@@ -8,6 +8,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include "glm/mat4x4.hpp"
+#include "glm/gtc/quaternion.hpp"
 #include <GL/glew.h>
 
 #ifdef _WIN32
@@ -31,7 +32,34 @@ void start_vr(void(start_render)(void));
 
 void update_vr(void(before_render)(void),void(update_render)(glm::mat4,glm::mat4),void(after_render)(void));
 
-XrHandJointLocationsEXT *get_joints_infos();
+enum vr_traker_type{
+    vr_headset = 0,
+    vr_left_hand = 1,
+    vr_right_hand = 2,
+};
+
+struct vr_pose_struct{
+    glm::vec3 position;
+    glm::quat quaternion;
+};
+typedef struct vr_pose_struct vr_pose;
+
+vr_pose get_vr_traker_pose(vr_traker_type traker);
+
+enum vr_action{
+    vr_grab = 0,
+    vr_use = 1,
+    vr_use_2 = 2,
+    vr_menu = 3,
+    vr_move_x = 4,
+    vr_move_y = 5,
+    vr_move_z = 6,
+    vr_rotate = 7,
+};
+
+float get_vr_action(vr_action action);
+
+XrHandJointLocationsEXT *get_vr_joints_infos();
 
 void stop_vr();
 
