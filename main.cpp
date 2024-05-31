@@ -1,4 +1,4 @@
-#include <iostream>
+
 #include "vr_manager.h"
 
 void start_vr_render(){
