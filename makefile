@@ -13,7 +13,7 @@ ifeq ($(findstring MINGW,$(OS)),MINGW)
 	compile_command = g++ -o run.exe vr_manager.cpp $(core_file) -IC:/msys64/mingw64/include -LC:/msys64/mingw64/lib -lglew32 -lopenxr_loader -lopengl32 -lgdi32 `sdl2-config --cflags --libs`
 endif
 ifeq ($(OS),Linux)
-	compile_command = g++ -o run vr_manager.cpp $(core_file) -lGL -lGLEW -lopenxr_loader $(xorg_stuf) -lX11 `sdl2-config --cflags --libs` 
+	compile_command = g++ -o run vr_manager.cpp $(core_file) -lGL -lGLEW -lopenxr_loader $(xorg_stuf) `sdl2-config --cflags --libs` 
 
 
 endif
