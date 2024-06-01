@@ -1017,32 +1017,65 @@ void start_vr(void(start_render)(void))
 
 bool continue_vr = true;
 
-void stop_vr(){
+void stop_vr()
+{
 	continue_vr = false;
 }
 
-void update_vr(void(before_render)(void),void(update_render)(glm::mat4,glm::mat4),void(after_render)(void))
+void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
-	before_render();
 
-	
+	XrResult result;
 
-	after_render();
+	XrActionSetCreateInfo main_actionset_info = {.type = XR_TYPE_ACTION_SET_CREATE_INFO, .next = NULL, .priority = 0};
+	strcpy(main_actionset_info.actionSetName, "mainactions");
+	strcpy(main_actionset_info.localizedActionSetName, "Main Actions");
+
+	XrActionSet main_actionset;
+	result = xrCreateActionSet(self->instance, &main_actionset_info, &main_actionset);
+	if (!xr_result(self->instance, result, "failed to create actionset"))
+		return;
+
+	xrStringToPath(self->instance, "/user/hand/left", &self->hand_paths[HAND_LEFT]);
+	xrStringToPath(self->instance, "/user/hand/right", &self->hand_paths[HAND_RIGHT]);
+
+	while (continue_vr)
+	{
+
+		SDL_Event sdl_event;
+		while (SDL_PollEvent(&sdl_event))
+		{
+			if (sdl_event.type == SDL_QUIT)
+			{
+				stop_vr();
+			}
+		}
+
+		before_render();
+
+		after_render();
+	}
 }
 
-vr_pose get_vr_traker_pose(vr_traker_type traker){
+vr_pose get_vr_traker_pose(vr_traker_type traker)
+{
 	vr_pose ret;
 	return ret;
 }
 
-float get_vr_action(vr_action action){
-    return 0;
+float get_vr_action(vr_action action)
+{
+	return 0;
+}
+
+void vibrate_traker(vr_traker_type traker,float time){
+
 }
 
 XrHandJointLocationsEXT *get_vr_joints_infos()
 {
 	return NULL;
-};
+}
 
 void end_vr(void(clean_render)(void))
 {

@@ -30,7 +30,7 @@
 
 void start_vr(void(start_render)(void));
 
-void update_vr(void(before_render)(void),void(update_render)(glm::mat4,glm::mat4),void(after_render)(void));
+void update_vr(void(before_render)(void),void(update_render)(glm::ivec2,glm::mat4,glm::mat4),void(after_render)(void));
 
 enum vr_traker_type{
     vr_headset = 0,
@@ -59,6 +59,8 @@ enum vr_action{
 };
 
 float get_vr_action(vr_action action);
+
+void vibrate_traker(vr_traker_type traker,float time);
 
 XrHandJointLocationsEXT *get_vr_joints_infos();
 
