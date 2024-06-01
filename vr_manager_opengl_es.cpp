@@ -1165,6 +1165,65 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 			return;
 	}
 
+	/*
+	User Paths
+
+		/user/hand/left
+		/user/hand/right
+
+	Input Component Paths
+	Left Hand
+
+		/user/hand/left/input/trigger
+		/user/hand/left/input/trigger/value
+		/user/hand/left/input/squeeze
+		/user/hand/left/input/squeeze/value
+		/user/hand/left/input/thumbstick
+		/user/hand/left/input/thumbstick/x
+		/user/hand/left/input/thumbstick/y
+		/user/hand/left/input/thumbstick/click
+		/user/hand/left/input/thumbrest
+		/user/hand/left/input/thumbrest/touch
+		/user/hand/left/input/system
+		/user/hand/left/input/menu
+		/user/hand/left/input/b
+		/user/hand/left/input/b/touch
+		/user/hand/left/input/x
+		/user/hand/left/input/x/touch
+
+	Right Hand
+
+		/user/hand/right/input/trigger
+		/user/hand/right/input/trigger/value
+		/user/hand/right/input/squeeze
+		/user/hand/right/input/squeeze/value
+		/user/hand/right/input/thumbstick
+		/user/hand/right/input/thumbstick/x
+		/user/hand/right/input/thumbstick/y
+		/user/hand/right/input/thumbstick/click
+		/user/hand/right/input/thumbrest
+		/user/hand/right/input/thumbrest/touch
+		/user/hand/right/input/system
+		/user/hand/right/input/menu
+		/user/hand/right/input/a
+		/user/hand/right/input/a/touch
+		/user/hand/right/input/y
+		/user/hand/right/input/y/touch
+
+	Output Component Paths
+	Haptics
+
+		/user/hand/left/output/haptic
+		/user/hand/right/output/haptic
+
+	Pose Paths
+
+		/user/hand/left/input/grip/pose
+		/user/hand/left/input/aim/pose
+		/user/hand/right/input/grip/pose
+		/user/hand/right/input/aim/pose
+	*/
+
 	while (continue_vr)
 	{
 
