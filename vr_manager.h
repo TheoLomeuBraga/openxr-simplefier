@@ -47,15 +47,17 @@ typedef struct vr_pose_struct vr_pose;
 vr_pose get_vr_traker_pose(vr_traker_type traker);
 
 enum vr_action{
-    vr_grab = 0,
-    vr_use = 1,
-    vr_use_2 = 2,
-    vr_menu = 3,
-    vr_menu_2 = 4,
-    vr_move_x = 5,
-    vr_move_y = 6,
-    vr_move_z = 7,
-    vr_rotate = 8,
+    vr_grab_l = 0,
+    vr_grab_r = 1,
+    vr_use_l = 2,
+    vr_use_r = 3,
+    vr_use_2_l = 4,
+    vr_use_2_r = 5,
+    vr_menu = 6,
+    vr_move_x = 7,
+    vr_move_y = 8,
+    vr_move_z = 9,
+    vr_rotate = 10,
 };
 
 float get_vr_action(vr_action action);

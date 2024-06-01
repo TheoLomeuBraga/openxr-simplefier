@@ -1022,6 +1022,27 @@ void stop_vr()
 	continue_vr = false;
 }
 
+std::map<unsigned char,float> actions_map = {
+	std::pair<unsigned char,float>(0,0.0),
+	std::pair<unsigned char,float>(1,0.0),
+	std::pair<unsigned char,float>(2,0.0),
+	std::pair<unsigned char,float>(3,0.0),
+	std::pair<unsigned char,float>(4,0.0),
+	std::pair<unsigned char,float>(5,0.0),
+	std::pair<unsigned char,float>(6,0.0),
+	std::pair<unsigned char,float>(7,0.0),
+	std::pair<unsigned char,float>(8,0.0),
+	std::pair<unsigned char,float>(9,0.0),
+	std::pair<unsigned char,float>(10,0.0),
+};
+
+std::map<unsigned char,vr_pose> traker_pose_map = {
+	std::pair<unsigned char,vr_pose>(0,{glm::vec3(0,0,0),glm::quat(0,0,0,1)}),
+	std::pair<unsigned char,vr_pose>(1,{glm::vec3(0,0,0),glm::quat(0,0,0,1)}),
+	std::pair<unsigned char,vr_pose>(2,{glm::vec3(0,0,0),glm::quat(0,0,0,1)}),
+	
+};
+
 void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
 
@@ -1032,12 +1053,12 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	strcpy(main_actionset_info.localizedActionSetName, "Main Actions");
 
 	XrActionSet main_actionset;
-	result = xrCreateActionSet(self->instance, &main_actionset_info, &main_actionset);
-	if (!xr_result(self->instance, result, "failed to create actionset"))
+	result = xrCreateActionSet(self.instance, &main_actionset_info, &main_actionset);
+	if (!xr_result(self.instance, result, "failed to create actionset"))
 		return;
 
-	xrStringToPath(self->instance, "/user/hand/left", &self->hand_paths[HAND_LEFT]);
-	xrStringToPath(self->instance, "/user/hand/right", &self->hand_paths[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left", &self.hand_paths[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right", &self.hand_paths[HAND_RIGHT]);
 
 	while (continue_vr)
 	{
@@ -1059,13 +1080,12 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 vr_pose get_vr_traker_pose(vr_traker_type traker)
 {
-	vr_pose ret;
-	return ret;
+	return traker_pose_map[traker];
 }
 
 float get_vr_action(vr_action action)
 {
-	return 0;
+	return actions_map[action];
 }
 
 void vibrate_traker(vr_traker_type traker,float time){
