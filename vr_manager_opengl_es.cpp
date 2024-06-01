@@ -1022,25 +1022,25 @@ void stop_vr()
 	continue_vr = false;
 }
 
-std::map<unsigned char,float> actions_map = {
-	std::pair<unsigned char,float>(0,0.0),
-	std::pair<unsigned char,float>(1,0.0),
-	std::pair<unsigned char,float>(2,0.0),
-	std::pair<unsigned char,float>(3,0.0),
-	std::pair<unsigned char,float>(4,0.0),
-	std::pair<unsigned char,float>(5,0.0),
-	std::pair<unsigned char,float>(6,0.0),
-	std::pair<unsigned char,float>(7,0.0),
-	std::pair<unsigned char,float>(8,0.0),
-	std::pair<unsigned char,float>(9,0.0),
-	std::pair<unsigned char,float>(10,0.0),
+std::map<unsigned char, float> actions_map = {
+	std::pair<unsigned char, float>(0, 0.0),
+	std::pair<unsigned char, float>(1, 0.0),
+	std::pair<unsigned char, float>(2, 0.0),
+	std::pair<unsigned char, float>(3, 0.0),
+	std::pair<unsigned char, float>(4, 0.0),
+	std::pair<unsigned char, float>(5, 0.0),
+	std::pair<unsigned char, float>(6, 0.0),
+	std::pair<unsigned char, float>(7, 0.0),
+	std::pair<unsigned char, float>(8, 0.0),
+	std::pair<unsigned char, float>(9, 0.0),
+	std::pair<unsigned char, float>(10, 0.0),
 };
 
-std::map<unsigned char,vr_pose> traker_pose_map = {
-	std::pair<unsigned char,vr_pose>(0,{glm::vec3(0,0,0),glm::quat(0,0,0,1)}),
-	std::pair<unsigned char,vr_pose>(1,{glm::vec3(0,0,0),glm::quat(0,0,0,1)}),
-	std::pair<unsigned char,vr_pose>(2,{glm::vec3(0,0,0),glm::quat(0,0,0,1)}),
-	
+std::map<unsigned char, vr_pose> traker_pose_map = {
+	std::pair<unsigned char, vr_pose>(0, {glm::vec3(0, 0, 0), glm::quat(0, 0, 0, 1)}),
+	std::pair<unsigned char, vr_pose>(1, {glm::vec3(0, 0, 0), glm::quat(0, 0, 0, 1)}),
+	std::pair<unsigned char, vr_pose>(2, {glm::vec3(0, 0, 0), glm::quat(0, 0, 0, 1)}),
+
 };
 
 void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
@@ -1059,6 +1059,111 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 	xrStringToPath(self.instance, "/user/hand/left", &self.hand_paths[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right", &self.hand_paths[HAND_RIGHT]);
+
+	XrAction grab_action_float;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "grab");
+		strcpy(action_info.localizedActionName, "Grab");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create grab action"))
+			return;
+	}
+
+	XrAction use_action_float;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "use");
+		strcpy(action_info.localizedActionName, "Use");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create use action"))
+			return;
+	}
+
+	XrAction use_2_action_float;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "use_2");
+		strcpy(action_info.localizedActionName, "Use 2");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create use 2 action"))
+			return;
+	}
+
+	XrAction move_x_y_action_vec_2;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_VECTOR2F_INPUT,
+										  .countSubactionPaths = HAND_LEFT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "move_x_y");
+		strcpy(action_info.localizedActionName, "Move x y");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create Move x y action"))
+			return;
+	}
+
+	XrAction move_z_action_float;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
+										  .countSubactionPaths = HAND_RIGHT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "move_z");
+		strcpy(action_info.localizedActionName, "Move z");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create move z action"))
+			return;
+	}
+
+	XrAction rotate_action_float;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
+										  .countSubactionPaths = HAND_RIGHT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "rotate");
+		strcpy(action_info.localizedActionName, "Rotate");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create rotate action"))
+			return;
+	}
+
+	XrAction menu_action_boolean;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = HAND_LEFT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "menu");
+		strcpy(action_info.localizedActionName, "Menu");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create menu action"))
+			return;
+	}
 
 	while (continue_vr)
 	{
@@ -1088,8 +1193,8 @@ float get_vr_action(vr_action action)
 	return actions_map[action];
 }
 
-void vibrate_traker(vr_traker_type traker,float time){
-
+void vibrate_traker(vr_traker_type traker, float time)
+{
 }
 
 XrHandJointLocationsEXT *get_vr_joints_infos()
