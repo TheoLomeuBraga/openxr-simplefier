@@ -1604,7 +1604,7 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 														.time = frameState.predictedDisplayTime};
 
 				result = self.hand_tracking.pfnLocateHandJointsEXT(self.hand_tracking.trackers[i],
-																	&locateInfo, &joint_locations[i]);
+																   &locateInfo, &joint_locations[i]);
 				if (!xr_result(self.instance, result, "failed to locate hand %d joints!", i))
 					break;
 
@@ -1661,7 +1661,6 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		bool hand_locations_valid[HAND_COUNT];
 		for (int i = 0; i < HAND_COUNT; i++)
 		{
-			
 		}
 
 		// --- Begin frame
@@ -1673,8 +1672,20 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 		for (uint32_t i = 0; i < view_count; i++)
 		{
-
 		}
+
+		XrSwapchainImageAcquireInfo acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
+													.next = NULL};
+		uint32_t acquired_index;
+		result = xrAcquireSwapchainImage(self.quad_swapchain, &acquire_info, &acquired_index);
+		if (!xr_result(self.instance, result, "failed to acquire swapchain image!"))
+			break;
+
+		XrSwapchainImageWaitInfo wait_info = {
+			.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .next = NULL, .timeout = 1000};
+		result = xrWaitSwapchainImage(self.quad_swapchain, &wait_info);
+		if (!xr_result(self.instance, result, "failed to wait for swapchain image!"))
+			break;
 
 		after_render();
 	}
