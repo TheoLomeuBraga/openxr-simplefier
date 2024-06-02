@@ -1027,6 +1027,45 @@ bool continue_vr = true;
 void stop_vr()
 {
 	continue_vr = false;
+
+	XrResult result;
+	xrRequestExitSession(self.session);
+
+	xrEndSession(self.session);
+
+	if (self.hand_tracking.system_supported)
+	{
+		PFN_xrDestroyHandTrackerEXT pfnDestroyHandTrackerEXT = NULL;
+		result = xrGetInstanceProcAddr(self.instance, "xrDestroyHandTrackerEXT",
+									   (PFN_xrVoidFunction *)&pfnDestroyHandTrackerEXT);
+
+		xr_result(self.instance, result, "Failed to get xrDestroyHandTrackerEXT function!");
+
+		if (self.hand_tracking.trackers[HAND_LEFT])
+		{
+			result = pfnDestroyHandTrackerEXT(self.hand_tracking.trackers[HAND_LEFT]);
+			if (xr_result(self.instance, result, "Failed to destroy left hand tracker"))
+			{
+				printf("Destroyed hand tracker for left hand\n");
+			}
+		}
+		if (self.hand_tracking.trackers[HAND_RIGHT])
+		{
+			result = pfnDestroyHandTrackerEXT(self.hand_tracking.trackers[HAND_RIGHT]);
+			if (xr_result(self.instance, result, "Failed to destroy left hand tracker"))
+			{
+				printf("Destroyed hand tracker for left hand\n");
+			}
+		}
+	}
+
+	xrDestroySession(self.session);
+
+	for (auto &frame_buffer : self.framebuffers)
+	{
+		glDeleteFramebuffers(frame_buffer.size(), frame_buffer.data());
+	}
+	xrDestroyInstance(self.instance);
 }
 
 std::map<unsigned char, float> actions_map = {
@@ -1418,6 +1457,14 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		}
 
 		before_render();
+
+		bool session_stopping = false;
+
+		XrEventDataBuffer runtime_event = {.type = XR_TYPE_EVENT_DATA_BUFFER, .next = NULL};
+		XrResult poll_result = xrPollEvent(self.instance, &runtime_event);
+		while (poll_result == XR_SUCCESS){
+
+		}
 
 		after_render();
 	}
