@@ -473,9 +473,10 @@ void print_reference_spaces(XrExample self)
 	}
 }
 
-void defout_event_manager(SDL_Event e){}
-void(*event_manager)(SDL_Event) = defout_event_manager;
-void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event)) {
+void defout_event_manager(SDL_Event e) {}
+void (*event_manager)(SDL_Event) = defout_event_manager;
+void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event))
+{
 	event_manager = sdl_event_manager;
 }
 
@@ -1028,8 +1029,6 @@ void stop_vr()
 	continue_vr = false;
 }
 
-
-
 std::map<unsigned char, float> actions_map = {
 	std::pair<unsigned char, float>(0, 0.0),
 	std::pair<unsigned char, float>(1, 0.0),
@@ -1112,6 +1111,21 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
 		if (!xr_result(self.instance, result, "failed to create use 2 action"))
+			return;
+	}
+
+	XrAction vibration_action;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "vibration");
+		strcpy(action_info.localizedActionName, "Vibration");
+
+		result = xrCreateAction(main_actionset, &action_info, &vibration_action);
+		if (!xr_result(self.instance, result, "failed to create vibration action"))
 			return;
 	}
 
@@ -1205,7 +1219,7 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 			return;
 	}
 
-	//quest 2
+	// quest 2
 	/*
 	User Paths
 
@@ -1266,37 +1280,38 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	*/
 
 	XrPath grab_path[HAND_COUNT];
-	xrStringToPath(self->instance, "/user/hand/left/input/squeeze/value",&grab_path[HAND_LEFT]);
-	xrStringToPath(self->instance, "/user/hand/right/input/squeeze/value",&grab_path[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/value", &grab_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/value", &grab_path[HAND_RIGHT]);
 
 	XrPath use_path[HAND_COUNT];
-	xrStringToPath(self->instance, "/user/hand/left/input/trigger/value",&use_path[HAND_LEFT]);
-	xrStringToPath(self->instance, "/user/hand/right/input/trigger/value",&use_path[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left/input/trigger/value", &use_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/trigger/value", &use_path[HAND_RIGHT]);
 
 	XrPath use_2_path[HAND_COUNT];
-	xrStringToPath(self->instance, "/user/hand/left/input/x",&use_2_path[HAND_LEFT]);
-	xrStringToPath(self->instance, "/user/hand/right/input/a",&use_2_path[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left/input/x", &use_2_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/a", &use_2_path[HAND_RIGHT]);
+
+	XrPath vibrate_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/output/haptic", &vibrate_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/output/haptic", &vibrate_path[HAND_RIGHT]);
 
 	XrPath movement_path[3];
-	xrStringToPath(self->instance, "/user/hand/left/input/thumbstick/x",&movement_path[0]);
-	xrStringToPath(self->instance, "/user/hand/left/input/thumbstick/y",&movement_path[1]);
-	xrStringToPath(self->instance, "/user/hand/right/input/thumbstick/y",&movement_path[2]);
+	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/x", &movement_path[0]);
+	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/y", &movement_path[1]);
+	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/y", &movement_path[2]);
 
 	XrPath rotate_path;
-	xrStringToPath(self->instance, "/user/hand/right/input/thumbstick/x",&rotate_path);
+	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/x", &rotate_path);
 
 	XrPath teleport_path;
-	xrStringToPath(self->instance, "/user/hand/left/input/thumbstick/click",&teleport_path);
+	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/click", &teleport_path);
 
 	XrPath special_path;
-	xrStringToPath(self->instance, "/user/hand/right/input/b",&special_path);
+	xrStringToPath(self.instance, "/user/hand/right/input/b", &special_path);
 
 	XrPath menu_path[2];
-	xrStringToPath(self->instance, "/user/hand/left/input/y",&menu_path[0]);
-	xrStringToPath(self->instance, "/user/hand/left/input/menu",&menu_path[1]);
-
-	
-		
+	xrStringToPath(self.instance, "/user/hand/left/input/y", &menu_path[0]);
+	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path[1]);
 
 	while (continue_vr)
 	{
@@ -1332,9 +1347,9 @@ void vibrate_traker(vr_traker_type traker, float time)
 {
 }
 
-XrHandJointLocationsEXT *get_vr_joints_infos()
+std::vector<vr_pose> get_vr_joints_infos()
 {
-	return NULL;
+	return {};
 }
 
 void end_vr(void(clean_render)(void))
