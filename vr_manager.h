@@ -28,6 +28,8 @@
 #include "openxr/openxr.h"
 #include "openxr/openxr_platform.h"
 
+void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event));
+
 void start_vr(void(start_render)(void));
 
 void update_vr(void(before_render)(void),void(update_render)(glm::ivec2,glm::mat4,glm::mat4),void(after_render)(void));
@@ -58,6 +60,8 @@ enum vr_action{
     vr_move_y = 8,
     vr_move_z = 9,
     vr_rotate = 10,
+    vr_teleport = 11,
+    vr_special = 12,
 };
 
 float get_vr_action(vr_action action);

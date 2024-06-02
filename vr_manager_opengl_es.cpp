@@ -473,6 +473,12 @@ void print_reference_spaces(XrExample self)
 	}
 }
 
+void defout_event_manager(SDL_Event e){}
+void(*event_manager)(SDL_Event) = defout_event_manager;
+void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event)) {
+	event_manager = sdl_event_manager;
+}
+
 XrExample self;
 void start_vr(void(start_render)(void))
 {
@@ -1022,6 +1028,8 @@ void stop_vr()
 	continue_vr = false;
 }
 
+
+
 std::map<unsigned char, float> actions_map = {
 	std::pair<unsigned char, float>(0, 0.0),
 	std::pair<unsigned char, float>(1, 0.0),
@@ -1034,6 +1042,8 @@ std::map<unsigned char, float> actions_map = {
 	std::pair<unsigned char, float>(8, 0.0),
 	std::pair<unsigned char, float>(9, 0.0),
 	std::pair<unsigned char, float>(10, 0.0),
+	std::pair<unsigned char, float>(11, 0.0),
+	std::pair<unsigned char, float>(12, 0.0),
 };
 
 std::map<unsigned char, vr_pose> traker_pose_map = {
@@ -1165,6 +1175,36 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 			return;
 	}
 
+	XrAction teleport_action_boolean;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = HAND_LEFT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "teleport");
+		strcpy(action_info.localizedActionName, "Teleport");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create teleport action"))
+			return;
+	}
+
+	XrAction special_action_boolean;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = HAND_LEFT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "special");
+		strcpy(action_info.localizedActionName, "Special");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		if (!xr_result(self.instance, result, "failed to create special action"))
+			return;
+	}
+
 	/*
 	User Paths
 
@@ -1233,7 +1273,9 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 			if (sdl_event.type == SDL_QUIT)
 			{
 				stop_vr();
+				break;
 			}
+			event_manager(sdl_event);
 		}
 
 		before_render();
