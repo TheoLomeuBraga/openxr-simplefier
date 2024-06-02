@@ -1642,8 +1642,6 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 							   &view_count, views.data());
 		if (!xr_result(self.instance, result, "Could not locate views"))
 			break;
-
-		//! @todo Move this action processing to before xrWaitFrame, probably.
 		const XrActiveActionSet active_actionsets[] = {
 			{.actionSet = main_actionset, .subactionPath = XR_NULL_PATH}};
 
@@ -1662,6 +1660,18 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		XrSpaceLocation hand_locations[HAND_COUNT];
 		bool hand_locations_valid[HAND_COUNT];
 		for (int i = 0; i < HAND_COUNT; i++)
+		{
+			
+		}
+
+		// --- Begin frame
+		XrFrameBeginInfo frame_begin_info = {.type = XR_TYPE_FRAME_BEGIN_INFO, .next = NULL};
+
+		result = xrBeginFrame(self.session, &frame_begin_info);
+		if (!xr_result(self.instance, result, "failed to begin frame!"))
+			break;
+
+		for (uint32_t i = 0; i < view_count; i++)
 		{
 
 		}
