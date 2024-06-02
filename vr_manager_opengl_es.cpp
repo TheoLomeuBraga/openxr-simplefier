@@ -1462,7 +1462,207 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 		XrEventDataBuffer runtime_event = {.type = XR_TYPE_EVENT_DATA_BUFFER, .next = NULL};
 		XrResult poll_result = xrPollEvent(self.instance, &runtime_event);
-		while (poll_result == XR_SUCCESS){
+		while (poll_result == XR_SUCCESS)
+		{
+			switch (runtime_event.type)
+			{
+			case XR_TYPE_EVENT_DATA_EVENTS_LOST:
+			{
+				XrEventDataEventsLost *event = (XrEventDataEventsLost *)&runtime_event;
+				printf("EVENT: %d events data lost!\n", event->lostEventCount);
+				// do we care if the runtime loses events?
+				break;
+			}
+			case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING:
+			{
+				XrEventDataInstanceLossPending *event = (XrEventDataInstanceLossPending *)&runtime_event;
+				printf("EVENT: instance loss pending at %lu! Destroying instance.\n", event->lossTime);
+				session_stopping = true;
+				break;
+			}
+			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
+			{
+				XrEventDataSessionStateChanged *event = (XrEventDataSessionStateChanged *)&runtime_event;
+				printf("EVENT: session state changed from %d to %d\n", self.state, event->state);
+
+				self.state = event->state;
+
+				if (event->state >= XR_SESSION_STATE_STOPPING)
+				{
+					printf("Session is stopping...\n");
+					// still handle rest of the events instead of immediately quitting
+					session_stopping = true;
+				}
+				break;
+			}
+			case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
+			{
+				printf("EVENT: reference space change pending!\n");
+				XrEventDataReferenceSpaceChangePending *event =
+					(XrEventDataReferenceSpaceChangePending *)&runtime_event;
+				(void)event;
+				// TODO: do something
+				break;
+			}
+			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
+			{
+				printf("EVENT: interaction profile changed!\n");
+				XrEventDataInteractionProfileChanged *event =
+					(XrEventDataInteractionProfileChanged *)&runtime_event;
+				(void)event;
+
+				XrInteractionProfileState state = {.type = XR_TYPE_INTERACTION_PROFILE_STATE};
+
+				for (int i = 0; i < 2; i++)
+				{
+					XrResult res = xrGetCurrentInteractionProfile(self.session, self.hand_paths[i], &state);
+					if (!xr_result(self.instance, res, "Failed to get interaction profile for %d", i))
+						continue;
+
+					XrPath prof = state.interactionProfile;
+
+					uint32_t strl;
+					char profile_str[XR_MAX_PATH_LENGTH];
+					res = xrPathToString(self.instance, prof, XR_MAX_PATH_LENGTH, &strl, profile_str);
+					if (!xr_result(self.instance, res, "Failed to get interaction profile path str for %s",
+								   h_p_str(i)))
+						continue;
+
+					printf("Event: Interaction profile changed for %s: %s\n", h_p_str(i), profile_str);
+				}
+				// TODO: do something
+				break;
+			}
+
+			case XR_TYPE_EVENT_DATA_VISIBILITY_MASK_CHANGED_KHR:
+			{
+				printf("EVENT: visibility mask changed!!\n");
+				XrEventDataVisibilityMaskChangedKHR *event =
+					(XrEventDataVisibilityMaskChangedKHR *)&runtime_event;
+				(void)event;
+				// this event is from an extension
+				break;
+			}
+			case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT:
+			{
+				printf("EVENT: perf settings!\n");
+				XrEventDataPerfSettingsEXT *event = (XrEventDataPerfSettingsEXT *)&runtime_event;
+				(void)event;
+				// this event is from an extension
+				break;
+			}
+			default:
+				printf("Unhandled event type %d\n", runtime_event.type);
+			}
+
+			runtime_event.type = XR_TYPE_EVENT_DATA_BUFFER;
+			poll_result = xrPollEvent(self.instance, &runtime_event);
+		}
+		if (poll_result == XR_EVENT_UNAVAILABLE)
+		{
+			// processed all events in the queue
+		}
+		else
+		{
+			printf("Failed to poll events!\n");
+			break;
+		}
+
+		if (session_stopping)
+		{
+			printf("Quitting main render loop\n");
+			return;
+		}
+
+		// --- Wait for our turn to do head-pose dependent computation and render a frame
+		XrFrameState frameState = {.type = XR_TYPE_FRAME_STATE, .next = NULL};
+		XrFrameWaitInfo frameWaitInfo = {.type = XR_TYPE_FRAME_WAIT_INFO, .next = NULL};
+		result = xrWaitFrame(self.session, &frameWaitInfo, &frameState);
+		if (!xr_result(self.instance, result, "xrWaitFrame() was not successful, exiting..."))
+			break;
+
+		XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
+		XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
+		if (self.hand_tracking.system_supported)
+		{
+
+			for (int i = 0; i < HAND_COUNT; i++)
+			{
+
+				joint_locations[i] = XrHandJointLocationsEXT{
+					.type = XR_TYPE_HAND_JOINT_LOCATIONS_EXT,
+					.jointCount = XR_HAND_JOINT_COUNT_EXT,
+					.jointLocations = joints[i],
+				};
+
+				if (self.hand_tracking.trackers[i] == NULL)
+					continue;
+
+				XrHandJointsLocateInfoEXT locateInfo = {.type = XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT,
+														.next = NULL,
+														.baseSpace = self.play_space,
+														.time = frameState.predictedDisplayTime};
+
+				result = self.hand_tracking.pfnLocateHandJointsEXT(self.hand_tracking.trackers[i],
+																	&locateInfo, &joint_locations[i]);
+				if (!xr_result(self.instance, result, "failed to locate hand %d joints!", i))
+					break;
+
+				/*
+				if (joint_locations[i].isActive) {
+				  printf("located hand %d joints", i);
+				  for (uint32_t j = 0; j < joint_locations[i].jointCount; j++) {
+					printf("%f ", joint_locations[i].jointLocations[j].radius);
+				  }
+				  printf("\n");
+				} else {
+				  printf("hand %d joints inactive\n", i);
+				}
+				*/
+			}
+		}
+
+		XrViewLocateInfo view_locate_info = {.type = XR_TYPE_VIEW_LOCATE_INFO,
+											 .next = NULL,
+											 .viewConfigurationType =
+												 XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
+											 .displayTime = frameState.predictedDisplayTime,
+											 .space = self.play_space};
+
+		uint32_t view_count = self.viewconfig_views.size();
+		std::vector<XrView> views(view_count);
+		for (uint32_t i = 0; i < view_count; i++)
+		{
+			views[i].type = XR_TYPE_VIEW;
+			views[i].next = NULL;
+		};
+
+		XrViewState view_state = {.type = XR_TYPE_VIEW_STATE, .next = NULL};
+		result = xrLocateViews(self.session, &view_locate_info, &view_state, view_count,
+							   &view_count, views.data());
+		if (!xr_result(self.instance, result, "Could not locate views"))
+			break;
+
+		//! @todo Move this action processing to before xrWaitFrame, probably.
+		const XrActiveActionSet active_actionsets[] = {
+			{.actionSet = main_actionset, .subactionPath = XR_NULL_PATH}};
+
+		XrActionsSyncInfo actions_sync_info = {
+			.type = XR_TYPE_ACTIONS_SYNC_INFO,
+			.countActiveActionSets = sizeof(active_actionsets) / sizeof(active_actionsets[0]),
+			.activeActionSets = active_actionsets,
+		};
+		result = xrSyncActions(self.session, &actions_sync_info);
+		xr_result(self.instance, result, "failed to sync actions!");
+
+		// query each value / location with a subaction path != XR_NULL_PATH
+		// resulting in individual values per hand/.
+		XrActionStateFloat grab_value[HAND_COUNT];
+		XrActionStateFloat throttle_value[HAND_COUNT];
+		XrSpaceLocation hand_locations[HAND_COUNT];
+		bool hand_locations_valid[HAND_COUNT];
+		for (int i = 0; i < HAND_COUNT; i++)
+		{
 
 		}
 
