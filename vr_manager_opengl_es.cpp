@@ -1303,8 +1303,8 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	xrStringToPath(self.instance, "/user/hand/right/input/trigger/value", &use_path[HAND_RIGHT]);
 
 	XrPath use_2_path[HAND_COUNT];
-	xrStringToPath(self.instance, "/user/hand/left/input/x", &use_2_path[HAND_LEFT]);
-	xrStringToPath(self.instance, "/user/hand/right/input/a", &use_2_path[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left/input/x/click", &use_2_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/a/click", &use_2_path[HAND_RIGHT]);
 
 	XrPath vibrate_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/output/haptic", &vibrate_path[HAND_LEFT]);
@@ -1323,10 +1323,10 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/click", &teleport_path);
 
 	XrPath special_path;
-	xrStringToPath(self.instance, "/user/hand/right/input/b", &special_path);
+	xrStringToPath(self.instance, "/user/hand/right/input/b/click", &special_path);
 
 	XrPath menu_path[2];
-	xrStringToPath(self.instance, "/user/hand/left/input/y", &menu_path[0]);
+	xrStringToPath(self.instance, "/user/hand/left/input/y/click", &menu_path[0]);
 	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path[1]);
 
 	{
