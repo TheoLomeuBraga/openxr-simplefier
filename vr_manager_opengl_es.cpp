@@ -1100,11 +1100,11 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 			return;
 	}
 
-	XrAction use_2_action_float;
+	XrAction use_2_action_boolean;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
-										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
 										  .countSubactionPaths = HAND_COUNT,
 										  .subactionPaths = self.hand_paths.data()};
 		strcpy(action_info.actionName, "use_2");
@@ -1195,7 +1195,7 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
-										  .countSubactionPaths = HAND_LEFT,
+										  .countSubactionPaths = HAND_RIGHT,
 										  .subactionPaths = self.hand_paths.data()};
 		strcpy(action_info.actionName, "special");
 		strcpy(action_info.localizedActionName, "Special");
@@ -1205,6 +1205,7 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 			return;
 	}
 
+	//quest 2
 	/*
 	User Paths
 
@@ -1263,6 +1264,39 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		/user/hand/right/input/grip/pose
 		/user/hand/right/input/aim/pose
 	*/
+
+	XrPath grab_path[HAND_COUNT];
+	xrStringToPath(self->instance, "/user/hand/left/input/squeeze/value",&grab_path[HAND_LEFT]);
+	xrStringToPath(self->instance, "/user/hand/right/input/squeeze/value",&grab_path[HAND_RIGHT]);
+
+	XrPath use_path[HAND_COUNT];
+	xrStringToPath(self->instance, "/user/hand/left/input/trigger/value",&use_path[HAND_LEFT]);
+	xrStringToPath(self->instance, "/user/hand/right/input/trigger/value",&use_path[HAND_RIGHT]);
+
+	XrPath use_2_path[HAND_COUNT];
+	xrStringToPath(self->instance, "/user/hand/left/input/x",&use_2_path[HAND_LEFT]);
+	xrStringToPath(self->instance, "/user/hand/right/input/a",&use_2_path[HAND_RIGHT]);
+
+	XrPath movement_path[3];
+	xrStringToPath(self->instance, "/user/hand/left/input/thumbstick/x",&movement_path[0]);
+	xrStringToPath(self->instance, "/user/hand/left/input/thumbstick/y",&movement_path[1]);
+	xrStringToPath(self->instance, "/user/hand/right/input/thumbstick/y",&movement_path[2]);
+
+	XrPath rotate_path;
+	xrStringToPath(self->instance, "/user/hand/right/input/thumbstick/x",&rotate_path);
+
+	XrPath teleport_path;
+	xrStringToPath(self->instance, "/user/hand/left/input/thumbstick/click",&teleport_path);
+
+	XrPath special_path;
+	xrStringToPath(self->instance, "/user/hand/right/input/b",&special_path);
+
+	XrPath menu_path[2];
+	xrStringToPath(self->instance, "/user/hand/left/input/y",&menu_path[0]);
+	xrStringToPath(self->instance, "/user/hand/left/input/menu",&menu_path[1]);
+
+	
+		
 
 	while (continue_vr)
 	{
