@@ -1069,6 +1069,21 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	xrStringToPath(self.instance, "/user/hand/left", &self.hand_paths[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right", &self.hand_paths[HAND_RIGHT]);
 
+	XrAction pose_action;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_POSE_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "handpose");
+		strcpy(action_info.localizedActionName, "Hand Pose");
+
+		result = xrCreateAction(main_actionset, &action_info, &pose_action);
+		if (!xr_result(self.instance, result, "failed to create pose action"))
+			return;
+	}
+
 	XrAction grab_action_float;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
@@ -1295,10 +1310,11 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	xrStringToPath(self.instance, "/user/hand/left/output/haptic", &vibrate_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/output/haptic", &vibrate_path[HAND_RIGHT]);
 
-	XrPath movement_path[3];
-	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/x", &movement_path[0]);
-	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/y", &movement_path[1]);
-	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/y", &movement_path[2]);
+	XrPath movement_x_y_path;
+	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick", &movement_x_y_path);
+
+	XrPath movement_z_path;
+	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/y", &movement_z_path);
 
 	XrPath rotate_path;
 	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/x", &rotate_path);
@@ -1312,6 +1328,80 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	XrPath menu_path[2];
 	xrStringToPath(self.instance, "/user/hand/left/input/y", &menu_path[0]);
 	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path[1]);
+
+	{
+		XrPath interaction_profile_path;
+		result = xrStringToPath(self.instance, "/interaction_profiles/khr/simple_controller",
+								&interaction_profile_path);
+		if (!xr_result(self.instance, result, "failed to get interaction profile"))
+			return;
+
+		const XrActionSuggestedBinding bindings[] = {
+			{.action = grab_action_float, .binding = grab_path[HAND_LEFT]},
+			{.action = grab_action_float, .binding = grab_path[HAND_RIGHT]},
+
+			{.action = use_action_float, .binding = use_path[HAND_LEFT]},
+			{.action = use_action_float, .binding = use_path[HAND_RIGHT]},
+
+			{.action = use_2_action_boolean, .binding = use_2_path[HAND_LEFT]},
+			{.action = use_2_action_boolean, .binding = use_2_path[HAND_RIGHT]},
+
+			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
+			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]},
+
+			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
+			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]},
+
+			{.action = move_x_y_action_vec_2, .binding = movement_x_y_path},
+			{.action = move_z_action_float, .binding = movement_z_path},
+			{.action = rotate_action_float, .binding = rotate_path},
+			{.action = teleport_action_boolean, .binding = teleport_path},
+
+			{.action = special_action_boolean, .binding = special_path},
+
+			{.action = menu_action_boolean, .binding = menu_path[0]},
+			{.action = menu_action_boolean, .binding = menu_path[1]},
+
+		};
+
+		const XrInteractionProfileSuggestedBinding suggested_bindings = {
+			.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+			.next = NULL,
+			.interactionProfile = interaction_profile_path,
+			.countSuggestedBindings = sizeof(bindings) / sizeof(bindings[0]),
+			.suggestedBindings = bindings};
+
+		xrSuggestInteractionProfileBindings(self.instance, &suggested_bindings);
+		if (!xr_result(self.instance, result, "failed to suggest bindings"))
+			return;
+
+		std::vector<unsigned char> spaces_to_create = {HAND_LEFT, HAND_RIGHT};
+
+		XrSpace pose_action_spaces[HAND_COUNT];
+		for (unsigned char HAND : spaces_to_create)
+		{
+
+			XrActionSpaceCreateInfo action_space_info;
+			action_space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+			action_space_info.next = NULL;
+			action_space_info.action = pose_action;
+			action_space_info.poseInActionSpace = identity_pose;
+			action_space_info.subactionPath = self.hand_paths[HAND];
+
+			result = xrCreateActionSpace(self.session, &action_space_info, &pose_action_spaces[HAND]);
+			if (!xr_result(self.instance, result, "failed to create left hand pose space"))
+				return;
+		}
+	}
+
+	XrSessionActionSetsAttachInfo actionset_attach_info = {
+		.type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+		.next = NULL,
+		.countActionSets = 1,
+		.actionSets = &main_actionset};
+	result = xrAttachSessionActionSets(self.session, &actionset_attach_info);
+	if (!xr_result(self.instance, result, "failed to attach action set"))
+		return;
 
 	while (continue_vr)
 	{
