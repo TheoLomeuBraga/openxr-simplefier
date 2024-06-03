@@ -9,7 +9,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include "glm/mat4x4.hpp"
-#include "glm/gtc/quaternion.hpp"
+#include <glm/gtx/quaternion.hpp>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
