@@ -53,6 +53,7 @@ namespace my_math
 		result = glm::mat4_cast(q);
 	}
 
+	/*
 	void XrMatrix4x4f_CreateViewMatrix(glm::mat4 &result, const glm::vec3 &translation, const glm::quat &rotation)
 	{
 		glm::mat4 rotationMatrix;
@@ -64,6 +65,19 @@ namespace my_math
 		glm::mat4 viewMatrix = translationMatrix * rotationMatrix;
 
 		glm::inverse(viewMatrix);
+	}
+	*/
+
+	void XrMatrix4x4f_CreateViewMatrix(glm::mat4 &result, const glm::vec3 &translation, const glm::quat &rotation)
+	{
+		// Converte a rotação de quaternion para uma matriz de rotação
+		glm::mat4 rotationMatrix = glm::toMat4(rotation);
+
+		// Cria uma matriz de translação
+		glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), translation);
+
+		// A matriz de visão é o inverso da matriz de modelo
+		result = glm::inverse(translationMatrix * rotationMatrix);
 	}
 
 	void XrMatrix4x4f_CreateModelMatrix(glm::mat4 &result, const glm::vec3 &translation, const glm::quat &rotation, const glm::vec3 &scale)
@@ -1178,14 +1192,14 @@ void render_quad(int w,
 			*(base + 0) = (((float)row / (float)h)) * 255.;
 			*(base + 1) = 0;
 			*(base + 2) = 0;
-			*(base + 3) = 255;
+			*(base + 3) = 0;
 
 			if (abs(row - col) < 3)
 			{
 				*(base + 0) = 255.;
 				*(base + 1) = 255;
 				*(base + 2) = 255;
-				*(base + 3) = 255;
+				*(base + 3) = 0;
 			}
 
 			if (abs((w - col) - (row)) < 3)
@@ -1193,7 +1207,7 @@ void render_quad(int w,
 				*(base + 0) = 0.;
 				*(base + 1) = 0;
 				*(base + 2) = 0;
-				*(base + 3) = 255;
+				*(base + 3) = 0;
 			}
 		}
 	}
@@ -1226,7 +1240,7 @@ std::map<unsigned char, vr_pose> traker_pose_map = {
 
 };
 
-void update_vr(void(before_render)(void), void(update_render)(unsigned int,glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
+void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
 
 	XrResult result;
@@ -1815,7 +1829,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int,glm::
 
 			glm::mat4 view_matrix(1.0f);
 			const glm::vec3 position(views[i].pose.position.x, views[i].pose.position.y, views[i].pose.position.z);
-			const glm::quat orientation(views[i].pose.orientation.x, views[i].pose.orientation.y, views[i].pose.orientation.z, views[i].pose.orientation.w);
+			const glm::quat orientation(views[i].pose.orientation.w,views[i].pose.orientation.x, views[i].pose.orientation.y, views[i].pose.orientation.z);
 
 			my_math::XrMatrix4x4f_CreateViewMatrix(view_matrix, position, orientation);
 
@@ -1879,7 +1893,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int,glm::
 						self.framebuffers[i][acquired_index], depth_image,
 						self.images[i][acquired_index], i, frameState.predictedDisplayTime);
 		   */
-			update_render(self.framebuffers[i][acquired_index],resolution, view_matrix, projection_matrix);
+			update_render(self.framebuffers[i][acquired_index], resolution, view_matrix, projection_matrix);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -1913,6 +1927,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int,glm::
 		if (!xr_result(self.instance, result, "failed to wait for swapchain image!"))
 			break;
 
+		/**/
 		render_quad(self.quad_pixel_width, self.quad_pixel_height, self.swapchain_format,
 					self.quad_images[acquired_index], frameState.predictedDisplayTime);
 
@@ -1937,6 +1952,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int,glm::
 			if (!xr_result(self.instance, result, "failed to wait for swapchain image!"))
 				break;
 
+			/**/
 			render_quad(self.cylinder.swapchain_width, self.cylinder.swapchain_height,
 						self.cylinder.format, self.cylinder.images[acquired_index],
 						frameState.predictedDisplayTime);
@@ -2004,7 +2020,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int,glm::
 		const XrCompositionLayerBaseHeader *submittedLayers[3] = {
 			(const XrCompositionLayerBaseHeader *const)&projection_layer};
 
-		if (true)
+		if (false)
 		{
 			submittedLayers[submitted_layer_count++] =
 				(const XrCompositionLayerBaseHeader *const)&quad_layer;
