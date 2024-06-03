@@ -13,6 +13,7 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #ifdef _WIN32
 #define XR_USE_PLATFORM_WIN32

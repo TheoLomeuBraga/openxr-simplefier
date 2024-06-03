@@ -2,6 +2,97 @@
 
 #include "vr_manager.h"
 
+namespace my_math
+{
+	typedef enum
+	{
+		GRAPHICS_VULKAN,
+		GRAPHICS_OPENGL,
+		GRAPHICS_OPENGL_ES
+	} GraphicsAPI;
+
+	void XrMatrix4x4f_CreateProjectionFov(glm::mat4 &result,
+										  GraphicsAPI graphicsApi,
+										  const XrFovf &fov,
+										  const float nearZ,
+										  const float farZ)
+	{
+		const float tanAngleLeft = tanf(fov.angleLeft);
+		const float tanAngleRight = tanf(fov.angleRight);
+		const float tanAngleDown = tanf(fov.angleDown);
+		const float tanAngleUp = tanf(fov.angleUp);
+
+		const float tanAngleWidth = tanAngleRight - tanAngleLeft;
+		const float tanAngleHeight = graphicsApi == GRAPHICS_VULKAN ? (tanAngleDown - tanAngleUp) : (tanAngleUp - tanAngleDown);
+		const float offsetZ = (graphicsApi == GRAPHICS_OPENGL || graphicsApi == GRAPHICS_OPENGL_ES) ? nearZ : 0.0f;
+
+		if (farZ <= nearZ)
+		{
+			// Infinite far plane
+			result = glm::mat4(0.0f);
+			result[0][0] = 2.0f / tanAngleWidth;
+			result[1][1] = 2.0f / tanAngleHeight;
+			result[2][2] = -1.0f;
+			result[2][3] = -1.0f;
+			result[3][2] = -(nearZ + offsetZ);
+		}
+		else
+		{
+			// Normal projection
+			result = glm::mat4(0.0f);
+			result[0][0] = 2.0f / tanAngleWidth;
+			result[1][1] = 2.0f / tanAngleHeight;
+			result[2][2] = -(farZ + offsetZ) / (farZ - nearZ);
+			result[2][3] = -1.0f;
+			result[3][2] = -(farZ * (nearZ + offsetZ)) / (farZ - nearZ);
+		}
+	}
+
+	void XrMatrix4x4f_CreateFromQuaternion(glm::mat4 &result, const XrQuaternionf &quat)
+	{
+		glm::quat q(quat.w, quat.x, quat.y, quat.z);
+		result = glm::mat4_cast(q);
+	}
+
+	void XrMatrix4x4f_CreateViewMatrix(glm::mat4 &result, const glm::vec3 &translation, const XrQuaternionf &rotation)
+	{
+		glm::mat4 rotationMatrix;
+		XrMatrix4x4f_CreateFromQuaternion(rotationMatrix, rotation);
+
+		glm::mat4 translationMatrix;
+		translationMatrix = glm::translate(glm::mat4(1.0f), translation);
+
+		glm::mat4 viewMatrix = translationMatrix * rotationMatrix;
+
+		glm::inverse(viewMatrix);
+	}
+
+	void XrMatrix4x4f_CreateModelMatrix(glm::mat4 &result, const glm::vec3 &translation, const XrQuaternionf &rotation, const glm::vec3 &scale)
+	{
+		glm::mat4 scaleMatrix;
+		scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
+
+		glm::mat4 rotationMatrix;
+		XrMatrix4x4f_CreateFromQuaternion(rotationMatrix, rotation);
+
+		glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), translation);
+
+		glm::mat4 combinedMatrix = rotationMatrix * scaleMatrix;
+		result = translationMatrix * combinedMatrix;
+
+	}
+
+	void printXrMatrix4x4(const glm::mat4 &matrix)
+	{
+		const float *m = glm::value_ptr(matrix);
+		std::cout << m[0] << " " << m[1] << " " << m[2] << " " << m[3] << "\n"
+				  << m[4] << " " << m[5] << " " << m[6] << " " << m[7] << "\n"
+				  << m[8] << " " << m[9] << " " << m[10] << " " << m[11] << "\n"
+				  << m[12] << " " << m[13] << " " << m[14] << " " << m[15] << "\n";
+	}
+
+};
+
 GLuint shaderProgramID = 0;
 GLuint VAOs[1] = {0};
 
@@ -1711,7 +1802,6 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		bool hand_locations_valid[HAND_COUNT];
 		for (int i = 0; i < HAND_COUNT; i++)
 		{
-			
 		}
 
 		// --- Begin frame
