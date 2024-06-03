@@ -11,7 +11,16 @@ void start_vr_render(){
 
 void before_vr_render(){}
 
+unsigned char c = 0;
 void update_vr_render(glm::ivec2 resolution,glm::mat4 view,glm::mat4 projection){
+    if(c == 0){
+        c++;
+        glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    }else if(c > 0){
+        c=0;
+        glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+    }
+    
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 

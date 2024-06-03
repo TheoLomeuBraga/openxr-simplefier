@@ -12,7 +12,6 @@ namespace my_math
 	} GraphicsAPI;
 
 	void XrMatrix4x4f_CreateProjectionFov(glm::mat4 &result,
-										  GraphicsAPI graphicsApi,
 										  const XrFovf &fov,
 										  const float nearZ,
 										  const float farZ)
@@ -23,8 +22,8 @@ namespace my_math
 		const float tanAngleUp = tanf(fov.angleUp);
 
 		const float tanAngleWidth = tanAngleRight - tanAngleLeft;
-		const float tanAngleHeight = graphicsApi == GRAPHICS_VULKAN ? (tanAngleDown - tanAngleUp) : (tanAngleUp - tanAngleDown);
-		const float offsetZ = (graphicsApi == GRAPHICS_OPENGL || graphicsApi == GRAPHICS_OPENGL_ES) ? nearZ : 0.0f;
+		const float tanAngleHeight = GRAPHICS_OPENGL_ES == GRAPHICS_VULKAN ? (tanAngleDown - tanAngleUp) : (tanAngleUp - tanAngleDown);
+		const float offsetZ = (GRAPHICS_OPENGL_ES == GRAPHICS_OPENGL || GRAPHICS_OPENGL_ES == GRAPHICS_OPENGL_ES) ? nearZ : 0.0f;
 
 		if (farZ <= nearZ)
 		{
@@ -48,13 +47,13 @@ namespace my_math
 		}
 	}
 
-	void XrMatrix4x4f_CreateFromQuaternion(glm::mat4 &result, const XrQuaternionf &quat)
+	void XrMatrix4x4f_CreateFromQuaternion(glm::mat4 &result, const glm::quat &quat)
 	{
 		glm::quat q(quat.w, quat.x, quat.y, quat.z);
 		result = glm::mat4_cast(q);
 	}
 
-	void XrMatrix4x4f_CreateViewMatrix(glm::mat4 &result, const glm::vec3 &translation, const XrQuaternionf &rotation)
+	void XrMatrix4x4f_CreateViewMatrix(glm::mat4 &result, const glm::vec3 &translation, const glm::quat &rotation)
 	{
 		glm::mat4 rotationMatrix;
 		XrMatrix4x4f_CreateFromQuaternion(rotationMatrix, rotation);
@@ -67,7 +66,7 @@ namespace my_math
 		glm::inverse(viewMatrix);
 	}
 
-	void XrMatrix4x4f_CreateModelMatrix(glm::mat4 &result, const glm::vec3 &translation, const XrQuaternionf &rotation, const glm::vec3 &scale)
+	void XrMatrix4x4f_CreateModelMatrix(glm::mat4 &result, const glm::vec3 &translation, const glm::quat &rotation, const glm::vec3 &scale)
 	{
 		glm::mat4 scaleMatrix;
 		scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
@@ -79,7 +78,6 @@ namespace my_math
 
 		glm::mat4 combinedMatrix = rotationMatrix * scaleMatrix;
 		result = translationMatrix * combinedMatrix;
-
 	}
 
 	void printXrMatrix4x4(const glm::mat4 &matrix)
@@ -1582,8 +1580,6 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	int loop_count = 0;
 	while (continue_vr)
 	{
-
-		std::cout << "AAAAA\n";
 		loop_count++;
 
 		SDL_Event sdl_event;
@@ -1813,7 +1809,95 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 		for (uint32_t i = 0; i < view_count; i++)
 		{
-			
+			glm::mat4 projection_matrix(1.0f);
+			my_math::XrMatrix4x4f_CreateProjectionFov(projection_matrix, views[i].fov,
+													  self.near_z, self.far_z);
+
+			glm::mat4 view_matrix(1.0f);
+			const glm::vec3 position(views[i].pose.position.x, views[i].pose.position.y, views[i].pose.position.z);
+			const glm::quat orientation(views[i].pose.orientation.x, views[i].pose.orientation.y, views[i].pose.orientation.z, views[i].pose.orientation.w);
+
+			my_math::XrMatrix4x4f_CreateViewMatrix(view_matrix, position, orientation);
+
+			XrSwapchainImageAcquireInfo acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
+														.next = NULL};
+			uint32_t acquired_index;
+			result = xrAcquireSwapchainImage(self.swapchains[i], &acquire_info, &acquired_index);
+			if (!xr_result(self.instance, result, "failed to acquire swapchain image!"))
+				break;
+
+			XrSwapchainImageWaitInfo wait_info = {
+				.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .next = NULL, .timeout = 1000};
+			result = xrWaitSwapchainImage(self.swapchains[i], &wait_info);
+			if (!xr_result(self.instance, result, "failed to wait for swapchain image!"))
+				break;
+
+			uint32_t depth_acquired_index = UINT32_MAX;
+			if (self.depth_swapchain_format != -1)
+			{
+				XrSwapchainImageAcquireInfo depth_acquire_info = {
+					.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, .next = NULL};
+				result = xrAcquireSwapchainImage(self.depth_swapchains[i], &depth_acquire_info,
+												 &depth_acquired_index);
+				if (!xr_result(self.instance, result, "failed to acquire swapchain image!"))
+					break;
+
+				XrSwapchainImageWaitInfo depth_wait_info = {
+					.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .next = NULL, .timeout = 1000};
+				result = xrWaitSwapchainImage(self.depth_swapchains[i], &depth_wait_info);
+				if (!xr_result(self.instance, result, "failed to wait for swapchain image!"))
+					break;
+			}
+
+			self.projection_views[i].pose = views[i].pose;
+			self.projection_views[i].fov = views[i].fov;
+
+			GLuint depth_image = self.depth_swapchain_format != -1
+									 ? self.depth_images[i][depth_acquired_index].image
+									 : UINT32_MAX;
+
+			glBindFramebuffer(GL_FRAMEBUFFER, self.framebuffers[i][acquired_index]);
+
+			glm::ivec2 resolution(self.viewconfig_views[i].recommendedImageRectWidth, self.viewconfig_views[i].recommendedImageRectHeight);
+
+			glViewport(0, 0, resolution.x, resolution.y);
+			glScissor(0, 0, resolution.x, resolution.y);
+
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.images[i][acquired_index].image, 0);
+			if (depth_image != UINT32_MAX)
+			{
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_image, 0);
+			}
+			else
+			{
+				// TODO: need a depth attachment for depth test when rendering to fbo
+			}
+			/*
+		   render_frame(self.viewconfig_views[i].recommendedImageRectWidth,
+						self.viewconfig_views[i].recommendedImageRectHeight, projection_matrix,
+						view_matrix, hand_locations, hand_locations_valid, joint_locations,
+						self.framebuffers[i][acquired_index], depth_image,
+						self.images[i][acquired_index], i, frameState.predictedDisplayTime);
+		   */
+			update_render(resolution, view_matrix, projection_matrix);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			glFinish();
+			XrSwapchainImageReleaseInfo release_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO,
+														.next = NULL};
+			result = xrReleaseSwapchainImage(self.swapchains[i], &release_info);
+			if (!xr_result(self.instance, result, "failed to release swapchain image!"))
+				break;
+
+			if (self.depth_swapchain_format != -1)
+			{
+				XrSwapchainImageReleaseInfo depth_release_info = {
+					.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, .next = NULL};
+				result = xrReleaseSwapchainImage(self.depth_swapchains[i], &depth_release_info);
+				if (!xr_result(self.instance, result, "failed to release swapchain image!"))
+					break;
+			}
 		}
 
 		XrSwapchainImageAcquireInfo acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
@@ -1840,8 +1924,8 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 		if (self.cylinder.supported)
 		{
-			XrSwapchainImageAcquireInfo acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
-														.next = NULL};
+			acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
+							.next = NULL};
 			uint32_t acquired_index;
 			result = xrAcquireSwapchainImage(self.cylinder.swapchain, &acquire_info, &acquired_index);
 			if (!xr_result(self.instance, result, "failed to acquire swapchain image!"))
@@ -1941,9 +2025,9 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		result = xrEndFrame(self.session, &frameEndInfo);
 		if (!xr_result(self.instance, result, "failed to end frame!"))
 			break;
-	}
 
-	after_render();
+		after_render();
+	}
 }
 
 vr_pose get_vr_traker_pose(vr_traker_type traker)
