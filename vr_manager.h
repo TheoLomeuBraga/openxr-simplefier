@@ -36,7 +36,7 @@ void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event));
 
 void start_vr(void(start_render)(void));
 
-void update_vr(void(before_render)(void),void(update_render)(glm::ivec2,glm::mat4,glm::mat4),void(after_render)(void));
+void update_vr(void(before_render)(void),void(update_render)(unsigned int,glm::ivec2,glm::mat4,glm::mat4),void(after_render)(void));
 
 enum vr_traker_type{
     vr_headset = 0,

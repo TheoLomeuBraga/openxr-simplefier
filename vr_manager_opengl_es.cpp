@@ -1226,7 +1226,7 @@ std::map<unsigned char, vr_pose> traker_pose_map = {
 
 };
 
-void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
+void update_vr(void(before_render)(void), void(update_render)(unsigned int,glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
 
 	XrResult result;
@@ -1879,7 +1879,7 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 						self.framebuffers[i][acquired_index], depth_image,
 						self.images[i][acquired_index], i, frameState.predictedDisplayTime);
 		   */
-			update_render(resolution, view_matrix, projection_matrix);
+			update_render(self.framebuffers[i][acquired_index],resolution, view_matrix, projection_matrix);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
