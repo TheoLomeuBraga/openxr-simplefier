@@ -1068,6 +1068,52 @@ void stop_vr()
 	xrDestroyInstance(self.instance);
 }
 
+void render_quad(int w,
+				 int h,
+				 int64_t swapchain_format,
+				 XrSwapchainImageOpenGLKHR image,
+				 XrTime predictedDisplayTime)
+{
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, image.image);
+
+	glViewport(0, 0, w, h);
+	glScissor(0, 0, w, h);
+
+	uint8_t *rgb = new uint8_t[w * h * 4];
+	for (int row = 0; row < h; row++)
+	{
+		for (int col = 0; col < w; col++)
+		{
+			uint8_t *base = &rgb[(row * w * 4 + col * 4)];
+			*(base + 0) = (((float)row / (float)h)) * 255.;
+			*(base + 1) = 0;
+			*(base + 2) = 0;
+			*(base + 3) = 255;
+
+			if (abs(row - col) < 3)
+			{
+				*(base + 0) = 255.;
+				*(base + 1) = 255;
+				*(base + 2) = 255;
+				*(base + 3) = 255;
+			}
+
+			if (abs((w - col) - (row)) < 3)
+			{
+				*(base + 0) = 0.;
+				*(base + 1) = 0;
+				*(base + 2) = 0;
+				*(base + 3) = 255;
+			}
+		}
+	}
+
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (GLsizei)w, (GLsizei)h, GL_RGBA, GL_UNSIGNED_BYTE,
+					(GLvoid *)rgb);
+	delete[] rgb;
+}
+
 std::map<unsigned char, float> actions_map = {
 	std::pair<unsigned char, float>(0, 0.0),
 	std::pair<unsigned char, float>(1, 0.0),
@@ -1442,8 +1488,12 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 	if (!xr_result(self.instance, result, "failed to attach action set"))
 		return;
 
+	int loop_count = 0;
 	while (continue_vr)
 	{
+
+		std::cout << "AAAAA\n";
+		loop_count++;
 
 		SDL_Event sdl_event;
 		while (SDL_PollEvent(&sdl_event))
@@ -1661,6 +1711,7 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		bool hand_locations_valid[HAND_COUNT];
 		for (int i = 0; i < HAND_COUNT; i++)
 		{
+			
 		}
 
 		// --- Begin frame
@@ -1672,6 +1723,7 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 
 		for (uint32_t i = 0; i < view_count; i++)
 		{
+			
 		}
 
 		XrSwapchainImageAcquireInfo acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
@@ -1687,8 +1739,121 @@ void update_vr(void(before_render)(void), void(update_render)(glm::ivec2, glm::m
 		if (!xr_result(self.instance, result, "failed to wait for swapchain image!"))
 			break;
 
-		after_render();
+		render_quad(self.quad_pixel_width, self.quad_pixel_height, self.swapchain_format,
+					self.quad_images[acquired_index], frameState.predictedDisplayTime);
+
+		XrSwapchainImageReleaseInfo release_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO,
+													.next = NULL};
+		result = xrReleaseSwapchainImage(self.quad_swapchain, &release_info);
+		if (!xr_result(self.instance, result, "failed to release swapchain image!"))
+			break;
+
+		if (self.cylinder.supported)
+		{
+			XrSwapchainImageAcquireInfo acquire_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO,
+														.next = NULL};
+			uint32_t acquired_index;
+			result = xrAcquireSwapchainImage(self.cylinder.swapchain, &acquire_info, &acquired_index);
+			if (!xr_result(self.instance, result, "failed to acquire swapchain image!"))
+				break;
+
+			XrSwapchainImageWaitInfo wait_info = {
+				.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .next = NULL, .timeout = 1000};
+			result = xrWaitSwapchainImage(self.cylinder.swapchain, &wait_info);
+			if (!xr_result(self.instance, result, "failed to wait for swapchain image!"))
+				break;
+
+			render_quad(self.cylinder.swapchain_width, self.cylinder.swapchain_height,
+						self.cylinder.format, self.cylinder.images[acquired_index],
+						frameState.predictedDisplayTime);
+
+			XrSwapchainImageReleaseInfo release_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO,
+														.next = NULL};
+			result = xrReleaseSwapchainImage(self.cylinder.swapchain, &release_info);
+			if (!xr_result(self.instance, result, "failed to release swapchain image!"))
+				break;
+		}
+
+		// projectionLayers struct reused for every frame
+		XrCompositionLayerProjection projection_layer = {
+			.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION,
+			.next = NULL,
+			.layerFlags = 0,
+			.space = self.play_space,
+			.viewCount = view_count,
+			.views = self.projection_views.data(),
+		};
+
+		float aspect = (float)self.quad_pixel_width / (float)self.quad_pixel_height;
+		float quad_width = 1.f;
+		XrCompositionLayerQuad quad_layer;
+
+		quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD,
+		quad_layer.next = NULL,
+		quad_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT,
+		quad_layer.space = self.play_space,
+		quad_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH,
+		quad_layer.pose = {.orientation = {.x = 0.f, .y = 0.f, .z = 0.f, .w = 1.f},
+						   .position = {.x = 1.5f, .y = .7f, .z = -1.5f}},
+		quad_layer.size = {.width = quad_width, .height = quad_width / aspect},
+		quad_layer.subImage = {
+			.swapchain = self.quad_swapchain,
+			.imageRect = {
+				.offset = {.x = 0, .y = 0},
+				.extent = {.width = (int32_t)self.quad_pixel_width,
+						   .height = (int32_t)self.quad_pixel_height},
+			}};
+
+		float cylinder_aspect =
+			(float)self.cylinder.swapchain_width / (float)self.cylinder.swapchain_height;
+
+		float threesixty = M_PI * 2 - 0.0001; /* TODO: spec issue range [0, 2π)*/
+
+		float angleratio = 1 + (loop_count % 1000) / 50.;
+		XrCompositionLayerCylinderKHR cylinder_layer = {
+			.type = XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR,
+			.next = NULL,
+			.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT,
+			.space = self.play_space,
+			.eyeVisibility = XR_EYE_VISIBILITY_BOTH,
+			.subImage = {.swapchain = self.cylinder.swapchain,
+						 .imageRect = {.offset = {.x = 0, .y = 0},
+									   .extent = {.width = (int32_t)self.cylinder.swapchain_width,
+												  .height = (int32_t)self.cylinder.swapchain_height}}},
+			.pose = {.orientation = {.x = 0.f, .y = 0.f, .z = 0.f, .w = 1.f},
+					 .position = {.x = 1.5f, .y = 0.f, .z = -1.5f}},
+			.radius = 0.5,
+			.centralAngle = threesixty / 3,
+			.aspectRatio = cylinder_aspect};
+
+		int submitted_layer_count = 1;
+		const XrCompositionLayerBaseHeader *submittedLayers[3] = {
+			(const XrCompositionLayerBaseHeader *const)&projection_layer};
+
+		if (true)
+		{
+			submittedLayers[submitted_layer_count++] =
+				(const XrCompositionLayerBaseHeader *const)&quad_layer;
+		}
+		if (self.cylinder.supported)
+		{
+			submittedLayers[submitted_layer_count++] =
+				(const XrCompositionLayerBaseHeader *const)&cylinder_layer;
+		};
+
+		XrFrameEndInfo frameEndInfo;
+		frameEndInfo.type = XR_TYPE_FRAME_END_INFO;
+		frameEndInfo.displayTime = frameState.predictedDisplayTime;
+		frameEndInfo.layerCount = submitted_layer_count;
+		frameEndInfo.layers = submittedLayers;
+		frameEndInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
+		frameEndInfo.next = NULL;
+		result = xrEndFrame(self.session, &frameEndInfo);
+		if (!xr_result(self.instance, result, "failed to end frame!"))
+			break;
 	}
+
+	after_render();
 }
 
 vr_pose get_vr_traker_pose(vr_traker_type traker)
@@ -1701,7 +1866,7 @@ float get_vr_action(vr_action action)
 	return actions_map[action];
 }
 
-void vibrate_traker(vr_traker_type traker, float time)
+void vibrate_traker(vr_traker_type traker, float power)
 {
 }
 
