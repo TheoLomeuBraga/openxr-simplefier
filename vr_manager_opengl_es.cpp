@@ -1048,8 +1048,6 @@ void start_vr(void(start_render)(void))
 
 bool continue_vr = true;
 
-
-
 void render_quad(int w,
 				 int h,
 				 int64_t swapchain_format,
@@ -1132,9 +1130,10 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	result = xrCreateActionSet(self.instance, &main_actionset_info, &main_actionset);
 	if (!xr_result(self.instance, result, "failed to create actionset"))
 		return;
-
+	
 	xrStringToPath(self.instance, "/user/hand/left", &self.hand_paths[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right", &self.hand_paths[HAND_RIGHT]);
+	
 
 	XrAction pose_action;
 	{
@@ -1361,6 +1360,12 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		/user/hand/right/input/aim/pose
 	*/
 
+	// oque o path /user/hand/left/input/grip/pose leva e qual e o path da posição da mão ?
+
+	XrPath grip_pose_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/grip/pose", &grip_pose_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/grip/pose", &grip_pose_path[HAND_RIGHT]);
+
 	XrPath grab_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/value", &grab_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/value", &grab_path[HAND_RIGHT]);
@@ -1404,6 +1409,9 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 
 		const XrActionSuggestedBinding bindings[] = {
+			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
+			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
+
 			{.action = grab_action_float, .binding = grab_path[HAND_LEFT]},
 			{.action = grab_action_float, .binding = grab_path[HAND_RIGHT]},
 
@@ -1441,24 +1449,33 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		xrSuggestInteractionProfileBindings(self.instance, &suggested_bindings);
 		if (!xr_result(self.instance, result, "failed to suggest bindings"))
 			return;
+	}
 
-		std::vector<unsigned char> spaces_to_create = {HAND_LEFT, HAND_RIGHT};
+	XrSpace pose_action_spaces[HAND_COUNT];
+	{
+		XrActionSpaceCreateInfo action_space_info;
+		action_space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+		action_space_info.next = NULL;
+		action_space_info.action = pose_action;
+		action_space_info.poseInActionSpace = identity_pose;
+		action_space_info.subactionPath = self.hand_paths[HAND_LEFT];
 
-		XrSpace pose_action_spaces[HAND_COUNT];
-		for (unsigned char HAND : spaces_to_create)
-		{
+		result = xrCreateActionSpace(self.session, &action_space_info, &pose_action_spaces[HAND_LEFT]);
+		if (!xr_result(self.instance, result, "failed to create left hand pose space"))
+			return;
+	}
+	{
+		XrActionSpaceCreateInfo action_space_info;
+		action_space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+		action_space_info.next = NULL;
+		action_space_info.action = pose_action;
+		action_space_info.poseInActionSpace = identity_pose;
+		action_space_info.subactionPath = self.hand_paths[HAND_RIGHT];
 
-			XrActionSpaceCreateInfo action_space_info;
-			action_space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
-			action_space_info.next = NULL;
-			action_space_info.action = pose_action;
-			action_space_info.poseInActionSpace = identity_pose;
-			action_space_info.subactionPath = self.hand_paths[HAND];
-
-			result = xrCreateActionSpace(self.session, &action_space_info, &pose_action_spaces[HAND]);
-			if (!xr_result(self.instance, result, "failed to create left hand pose space"))
-				return;
-		}
+		result =
+			xrCreateActionSpace(self.session, &action_space_info, &pose_action_spaces[HAND_RIGHT]);
+		if (!xr_result(self.instance, result, "failed to create left hand pose space"))
+			return;
 	}
 
 	XrSessionActionSetsAttachInfo actionset_attach_info = {
@@ -1485,7 +1502,10 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 			event_manager(sdl_event);
 		}
-		if(!continue_vr){break;}
+		if (!continue_vr)
+		{
+			break;
+		}
 
 		before_render();
 
@@ -1692,7 +1712,35 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		bool hand_locations_valid[HAND_COUNT];
 		for (int i = 0; i < HAND_COUNT; i++)
 		{
-			//hands
+			// hands
+			XrActionStatePose pose_state = {.type = XR_TYPE_ACTION_STATE_POSE, .next = NULL};
+			{
+				XrActionStateGetInfo get_info = {.type = XR_TYPE_ACTION_STATE_GET_INFO,
+												 .next = NULL,
+												 .action = pose_action,
+												 .subactionPath = self.hand_paths[i]};
+				result = xrGetActionStatePose(self.session, &get_info, &pose_state);
+				xr_result(self.instance, result, "failed to get pose value!");
+			}
+
+			hand_locations[i].type = XR_TYPE_SPACE_LOCATION;
+			hand_locations[i].next = NULL;
+
+			result = xrLocateSpace(pose_action_spaces[i], self.play_space, frameState.predictedDisplayTime, &hand_locations[i]);
+			xr_result(self.instance, result, "failed to locate space %d!", i);
+			hand_locations_valid[i] = (hand_locations[i].locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0;
+
+			if (i == HAND_LEFT)
+			{
+
+				traker_pose_map[vr_left_hand].position = glm::vec3(hand_locations[i].pose.position.x, hand_locations[i].pose.position.y, hand_locations[i].pose.position.z);
+				traker_pose_map[vr_left_hand].quaternion = glm::quat(hand_locations[i].pose.orientation.w, hand_locations[i].pose.orientation.x, hand_locations[i].pose.orientation.y, hand_locations[i].pose.orientation.z);
+			}
+			else if (i == HAND_RIGHT)
+			{
+				traker_pose_map[vr_right_hand].position = glm::vec3(hand_locations[i].pose.position.x, hand_locations[i].pose.position.y, hand_locations[i].pose.position.z);
+				traker_pose_map[vr_right_hand].quaternion = glm::quat(hand_locations[i].pose.orientation.w, hand_locations[i].pose.orientation.x, hand_locations[i].pose.orientation.y, hand_locations[i].pose.orientation.z);
+			}
 		}
 
 		// --- Begin frame
@@ -1710,9 +1758,9 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 			glm::mat4 view_matrix(1.0f);
 			const glm::vec3 position(views[i].pose.position.x, views[i].pose.position.y, views[i].pose.position.z);
-			const glm::quat orientation(views[i].pose.orientation.w,views[i].pose.orientation.x, views[i].pose.orientation.y, views[i].pose.orientation.z);
+			const glm::quat orientation(views[i].pose.orientation.w, views[i].pose.orientation.x, views[i].pose.orientation.y, views[i].pose.orientation.z);
 
-			traker_pose_map[vr_headset] = {position,orientation};
+			traker_pose_map[vr_headset] = {position, orientation};
 
 			my_math::XrMatrix4x4f_CreateViewMatrix(view_matrix, position, orientation);
 
@@ -1779,10 +1827,10 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			update_render(self.framebuffers[i][acquired_index], resolution, view_matrix, projection_matrix);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			if(i == 1){
+			if (i == 1)
+			{
 				update_render(self.framebuffers[i][acquired_index], resolution, view_matrix, projection_matrix);
 			}
-			
 
 			glFinish();
 			XrSwapchainImageReleaseInfo release_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO,
@@ -1997,5 +2045,4 @@ void end_vr(void(clean_render)(void))
 	SDL_DestroyWindow(desktop_window);
 
 	SDL_Quit();
-
 };
