@@ -159,14 +159,17 @@ void start_vr_render()
     render_shapes::setup_cube_render();
 }
 
-void before_vr_render() {}
+void before_vr_render() {
+    vr_pose pose = get_vr_traker_pose(vr_headset);
+    std::cout << pose.position.x  << "  " << pose.position.y  << "  " << pose.position.z << "\n";
+}
 
 unsigned char c = 0;
 void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat4 view, glm::mat4 projection)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    render_shapes::render_cube(view,projection, glm::vec3(0.0,-10.0,0.0),glm::vec4(1.0,1.0,1.0,1.0), glm::vec3(100.0,0.1,100.0));
-    render_shapes::render_cube(view,projection, glm::vec3(0.0,10.0,0.0),glm::vec4(1.0,1.0,1.0,1.0), glm::vec3(100.0,0.1,100.0));
+
+    render_shapes::render_cube(view,projection, glm::vec3(0.0,0.0,0.0),glm::vec4(1.0,1.0,1.0,1.0), glm::vec3(2.0,0.1,2.0));
 }
 
 void after_vr_render() {}

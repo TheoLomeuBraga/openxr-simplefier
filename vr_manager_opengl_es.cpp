@@ -281,8 +281,7 @@ bool init_sdl_window(Display *&xDisplay, GLXContext &glxContext, int w, int h)
 		return false;
 	}
 
-	XMapWindow(xDisplay, win);
-	XStoreName(xDisplay, win, "OpenXR Example");
+	
 
 	if (!glXMakeCurrent(xDisplay, win, glxContext))
 	{
@@ -1606,6 +1605,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 			event_manager(sdl_event);
 		}
+		if(continue_vr == false){break;}
 
 		before_render();
 
@@ -1830,6 +1830,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			glm::mat4 view_matrix(1.0f);
 			const glm::vec3 position(views[i].pose.position.x, views[i].pose.position.y, views[i].pose.position.z);
 			const glm::quat orientation(views[i].pose.orientation.w,views[i].pose.orientation.x, views[i].pose.orientation.y, views[i].pose.orientation.z);
+
+			traker_pose_map[vr_headset] = {position,orientation};
 
 			my_math::XrMatrix4x4f_CreateViewMatrix(view_matrix, position, orientation);
 
