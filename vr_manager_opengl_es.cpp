@@ -1692,6 +1692,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		bool hand_locations_valid[HAND_COUNT];
 		for (int i = 0; i < HAND_COUNT; i++)
 		{
+			//hands
 		}
 
 		// --- Begin frame
