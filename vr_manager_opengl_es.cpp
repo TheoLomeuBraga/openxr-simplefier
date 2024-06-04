@@ -1048,49 +1048,7 @@ void start_vr(void(start_render)(void))
 
 bool continue_vr = true;
 
-void stop_vr()
-{
-	continue_vr = false;
 
-	XrResult result;
-	xrRequestExitSession(self.session);
-
-	xrEndSession(self.session);
-
-	if (self.hand_tracking.system_supported)
-	{
-		PFN_xrDestroyHandTrackerEXT pfnDestroyHandTrackerEXT = NULL;
-		result = xrGetInstanceProcAddr(self.instance, "xrDestroyHandTrackerEXT",
-									   (PFN_xrVoidFunction *)&pfnDestroyHandTrackerEXT);
-
-		xr_result(self.instance, result, "Failed to get xrDestroyHandTrackerEXT function!");
-
-		if (self.hand_tracking.trackers[HAND_LEFT])
-		{
-			result = pfnDestroyHandTrackerEXT(self.hand_tracking.trackers[HAND_LEFT]);
-			if (xr_result(self.instance, result, "Failed to destroy left hand tracker"))
-			{
-				printf("Destroyed hand tracker for left hand\n");
-			}
-		}
-		if (self.hand_tracking.trackers[HAND_RIGHT])
-		{
-			result = pfnDestroyHandTrackerEXT(self.hand_tracking.trackers[HAND_RIGHT]);
-			if (xr_result(self.instance, result, "Failed to destroy left hand tracker"))
-			{
-				printf("Destroyed hand tracker for left hand\n");
-			}
-		}
-	}
-
-	xrDestroySession(self.session);
-
-	for (auto &frame_buffer : self.framebuffers)
-	{
-		glDeleteFramebuffers(frame_buffer.size(), frame_buffer.data());
-	}
-	xrDestroyInstance(self.instance);
-}
 
 void render_quad(int w,
 				 int h,
@@ -1522,12 +1480,12 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		{
 			if (sdl_event.type == SDL_QUIT)
 			{
-				stop_vr();
+				continue_vr = false;
 				break;
 			}
 			event_manager(sdl_event);
 		}
-		if(continue_vr == false){break;}
+		if(!continue_vr){break;}
 
 		before_render();
 
@@ -2018,9 +1976,9 @@ void end_vr(void(clean_render)(void))
 		if (self.hand_tracking.trackers[HAND_RIGHT])
 		{
 			result = pfnDestroyHandTrackerEXT(self.hand_tracking.trackers[HAND_RIGHT]);
-			if (xr_result(self.instance, result, "Failed to destroy left hand tracker"))
+			if (xr_result(self.instance, result, "Failed to destroy right hand tracker"))
 			{
-				printf("Destroyed hand tracker for left hand\n");
+				printf("Destroyed hand tracker for right hand\n");
 			}
 		}
 	}
@@ -2033,7 +1991,10 @@ void end_vr(void(clean_render)(void))
 	}
 	xrDestroyInstance(self.instance);
 
+	clean_render();
+
 	SDL_DestroyWindow(desktop_window);
 
-	clean_render();
+	SDL_Quit();
+
 };

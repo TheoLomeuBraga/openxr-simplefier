@@ -185,5 +185,6 @@ int main()
     start_vr(start_vr_render);
     update_vr(before_vr_render, update_vr_render, after_vr_render);
     end_vr(end_vr_render);
+    
     return 0;
 }
