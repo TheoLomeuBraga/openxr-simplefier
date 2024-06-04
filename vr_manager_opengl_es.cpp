@@ -216,87 +216,9 @@ bool init_sdl_window(Display *&xDisplay, GLXContext &glxContext, int w, int h)
 
 	SDL_GL_SetSwapInterval(0);
 
-	xDisplay = XOpenDisplay(NULL);
-	if (!xDisplay)
-	{
-		printf("Unable to open X display\n");
-		SDL_GL_DeleteContext(gl_context);
-		SDL_DestroyWindow(desktop_window);
-		SDL_Quit();
-		return false;
-	}
+	xDisplay = glXGetCurrentDisplay();
+	glxContext = glXGetCurrentContext();
 
-	// Create an X window using the visual info
-	int screen = DefaultScreen(xDisplay);
-	int glxAttribs[] = {
-		GLX_RGBA,
-		GLX_RED_SIZE, 8,
-		GLX_GREEN_SIZE, 8,
-		GLX_BLUE_SIZE, 8,
-		GLX_ALPHA_SIZE, 8,
-		GLX_DEPTH_SIZE, 24,
-		GLX_STENCIL_SIZE, 8,
-		GLX_DOUBLEBUFFER,
-		None};
-
-	XVisualInfo *vi = glXChooseVisual(xDisplay, screen, glxAttribs);
-	if (!vi)
-	{
-		printf("No appropriate visual found\n");
-		XCloseDisplay(xDisplay);
-		SDL_GL_DeleteContext(gl_context);
-		SDL_DestroyWindow(desktop_window);
-		SDL_Quit();
-		return false;
-	}
-
-	glxContext = glXCreateContext(xDisplay, vi, NULL, GL_TRUE);
-	if (!glxContext)
-	{
-		printf("Unable to create GLX context\n");
-		XFree(vi);
-		XCloseDisplay(xDisplay);
-		SDL_GL_DeleteContext(gl_context);
-		SDL_DestroyWindow(desktop_window);
-		SDL_Quit();
-		return false;
-	}
-
-	Window root = RootWindow(xDisplay, vi->screen);
-	XSetWindowAttributes swa;
-	swa.colormap = XCreateColormap(xDisplay, root, vi->visual, AllocNone);
-	swa.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
-	swa.border_pixel = 0;
-
-	Window win = XCreateWindow(xDisplay, root, 0, 0, w / 2, h / 2, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask | CWBorderPixel, &swa);
-	if (!win)
-	{
-		printf("Unable to create X window\n");
-		glXDestroyContext(xDisplay, glxContext);
-		XFree(vi);
-		XCloseDisplay(xDisplay);
-		SDL_GL_DeleteContext(gl_context);
-		SDL_DestroyWindow(desktop_window);
-		SDL_Quit();
-		return false;
-	}
-
-	
-
-	if (!glXMakeCurrent(xDisplay, win, glxContext))
-	{
-		printf("Unable to make GLX context current\n");
-		XDestroyWindow(xDisplay, win);
-		glXDestroyContext(xDisplay, glxContext);
-		XFree(vi);
-		XCloseDisplay(xDisplay);
-		SDL_GL_DeleteContext(gl_context);
-		SDL_DestroyWindow(desktop_window);
-		SDL_Quit();
-		return false;
-	}
-
-	XFree(vi);
 	return true;
 }
 
@@ -1898,6 +1820,10 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			update_render(self.framebuffers[i][acquired_index], resolution, view_matrix, projection_matrix);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			if(i == 1){
+				update_render(self.framebuffers[i][acquired_index], resolution, view_matrix, projection_matrix);
+			}
+			
 
 			glFinish();
 			XrSwapchainImageReleaseInfo release_info = {.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO,
@@ -2106,6 +2032,8 @@ void end_vr(void(clean_render)(void))
 		glDeleteFramebuffers(frame_buffer.size(), frame_buffer.data());
 	}
 	xrDestroyInstance(self.instance);
+
+	SDL_DestroyWindow(desktop_window);
 
 	clean_render();
 };
