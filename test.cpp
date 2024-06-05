@@ -172,15 +172,15 @@ void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat
     render_shapes::render_cube(view,projection, glm::vec3(0.0,0.0,0.0),glm::vec4(1.0,1.0,1.0,1.0), glm::vec3(2.0,0.05,2.0));
 
     vr_pose pose = get_vr_traker_pose(vr_left_hand);
-    render_shapes::render_cube(view,projection, pose.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.05,0.05,0.05),pose.quaternion);
+    render_shapes::render_cube(view,projection, pose.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.02,0.02,0.1),pose.quaternion);
     pose = get_vr_traker_pose(vr_right_hand);
-    render_shapes::render_cube(view,projection, pose.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.05,0.05,0.05),pose.quaternion);
+    render_shapes::render_cube(view,projection, pose.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.02,0.02,0.1),pose.quaternion);
 
     for(vr_pose p : get_vr_joints_infos(vr_left_hand)){
-        render_shapes::render_cube(view,projection, p.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.01,0.01,0.01),p.quaternion);
+        render_shapes::render_cube(view,projection, p.position,glm::vec4(0.0,1.0,0.0,1.0), glm::vec3(0.01,0.01,0.01),p.quaternion);
     }
     for(vr_pose p : get_vr_joints_infos(vr_right_hand)){
-        render_shapes::render_cube(view,projection, p.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.01,0.01,0.01),p.quaternion);
+        render_shapes::render_cube(view,projection, p.position,glm::vec4(0.0,1.0,0.0,1.0), glm::vec3(0.01,0.01,0.01),p.quaternion);
     }
 }
 

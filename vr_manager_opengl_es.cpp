@@ -1135,7 +1135,8 @@ std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand)
 	}
 	std::vector<vr_pose> ret;
 	for(int i = 0 ; i < XR_HAND_JOINT_COUNT_EXT; i++){
-
+		XrPosef p = hand_joints[i].pose;
+		ret.push_back({glm::vec3(p.position.x,p.position.y,p.position.z),glm::quat(p.orientation.w,p.orientation.x,p.orientation.y,p.orientation.z)});
 	}
 	return ret;
 }
