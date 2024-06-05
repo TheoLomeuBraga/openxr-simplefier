@@ -34,7 +34,7 @@
 
 void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event));
 
-void start_vr(void(start_render)(void));
+void start_vr(std::string name,void(start_render)(void));
 
 void update_vr(void(before_render)(void),void(update_render)(unsigned int,glm::ivec2,glm::mat4,glm::mat4),void(after_render)(void));
 
@@ -72,7 +72,7 @@ float get_vr_action(vr_action action);
 
 void vibrate_traker(vr_traker_type traker,float power);
 
-std::vector<vr_pose> get_vr_joints_infos();
+std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand);
 
 void stop_vr();
 

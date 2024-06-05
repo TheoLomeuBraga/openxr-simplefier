@@ -2,6 +2,8 @@
 
 #include "vr_manager.h"
 
+std::string window_name = "window";
+
 namespace my_math
 {
 	typedef enum
@@ -140,7 +142,7 @@ bool init_sdl_window(HDC &xDisplay, HGLRC &glxContext, int w, int h)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
 	/* Create our window centered at half the VR resolution */
-	desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	desktop_window = SDL_CreateWindow(window_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 									  w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 	if (!desktop_window)
 	{
@@ -183,7 +185,7 @@ bool init_sdl_window(Display *&xDisplay, GLXContext &glxContext, int w, int h)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
 	/* Create our window centered at half the VR resolution */
-	desktop_window = SDL_CreateWindow("OpenXR Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	desktop_window = SDL_CreateWindow(window_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 									  w / 2, h / 2, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 	if (!desktop_window)
 	{
@@ -505,7 +507,7 @@ void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event))
 }
 
 XrExample self;
-void start_vr(void(start_render)(void))
+void start_vr(std::string name,void(start_render)(void))
 {
 	XrResult result;
 
@@ -677,6 +679,8 @@ void start_vr(void(start_render)(void))
 	// On OpenGL we never fail this check because the version requirement is not useful.
 	// Other APIs may have more useful requirements.
 	check_opengl_version(&opengl_reqs);
+
+	window_name = name;
 
 #ifdef _WIN32
 	self.graphics_binding_gl = XrGraphicsBindingOpenGLWin32KHR{
@@ -1117,6 +1121,26 @@ std::map<unsigned char, vr_pose> traker_pose_map = {
 
 };
 
+XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
+XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
+std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand)
+{
+	XrHandJointLocationEXT* hand_joints = nullptr;
+	if(hand == vr_left_hand){
+		hand_joints = joints[HAND_LEFT];
+	}else if(hand == vr_right_hand){
+		hand_joints = joints[HAND_RIGHT];
+	}else{
+		return {};
+	}
+	std::vector<vr_pose> ret;
+	for(int i = 0 ; i < XR_HAND_JOINT_COUNT_EXT; i++){
+
+	}
+	return ret;
+}
+
+
 void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
 
@@ -1130,10 +1154,9 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	result = xrCreateActionSet(self.instance, &main_actionset_info, &main_actionset);
 	if (!xr_result(self.instance, result, "failed to create actionset"))
 		return;
-	
+
 	xrStringToPath(self.instance, "/user/hand/left", &self.hand_paths[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right", &self.hand_paths[HAND_RIGHT]);
-	
 
 	XrAction pose_action;
 	{
@@ -1149,6 +1172,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		if (!xr_result(self.instance, result, "failed to create pose action"))
 			return;
 	}
+
+	/*
 
 	XrAction grab_action_float;
 	{
@@ -1300,6 +1325,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
+	*/
+
 	// quest 2
 	/*
 	User Paths
@@ -1366,6 +1393,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/grip/pose", &grip_pose_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/grip/pose", &grip_pose_path[HAND_RIGHT]);
 
+	/*
+
 	XrPath grab_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/value", &grab_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/value", &grab_path[HAND_RIGHT]);
@@ -1401,9 +1430,11 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/y/click", &menu_path[0]);
 	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path[1]);
 
+	*/
+
 	{
 		XrPath interaction_profile_path;
-		result = xrStringToPath(self.instance, "/interaction_profiles/khr/simple_controller",
+		result = xrStringToPath(self.instance, "/interaction_profiles/oculus/touch_controller",
 								&interaction_profile_path);
 		if (!xr_result(self.instance, result, "failed to get interaction profile"))
 			return;
@@ -1412,6 +1443,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
 
+			/*
 			{.action = grab_action_float, .binding = grab_path[HAND_LEFT]},
 			{.action = grab_action_float, .binding = grab_path[HAND_RIGHT]},
 
@@ -1436,6 +1468,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 			{.action = menu_action_boolean, .binding = menu_path[0]},
 			{.action = menu_action_boolean, .binding = menu_path[1]},
+			*/
 
 		};
 
@@ -1632,8 +1665,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		if (!xr_result(self.instance, result, "xrWaitFrame() was not successful, exiting..."))
 			break;
 
-		XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
-		XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
 		if (self.hand_tracking.system_supported)
 		{
 
@@ -1995,10 +2026,6 @@ void vibrate_traker(vr_traker_type traker, float power)
 {
 }
 
-std::vector<vr_pose> get_vr_joints_infos()
-{
-	return {};
-}
 
 void end_vr(void(clean_render)(void))
 {
