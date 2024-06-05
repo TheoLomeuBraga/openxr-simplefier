@@ -126,7 +126,7 @@ void main()
         glBindVertexArray(0);
     }
 
-    void render_cube(glm::mat4 view, glm::mat4 projection, glm::vec3 position,glm::vec4 color = glm::vec4(1.0,1.0,1.0,1.0), glm::vec3 scale = glm::vec3(1.0,1.0,1.0), glm::quat orientation = glm::quat(1.0,0.0,0.0,0.0))
+    void render_cube(glm::mat4 view, glm::mat4 projection, glm::vec3 position, glm::vec4 color = glm::vec4(1.0, 1.0, 1.0, 1.0), glm::vec3 scale = glm::vec3(1.0, 1.0, 1.0), glm::quat orientation = glm::quat(1.0, 0.0, 0.0, 0.0))
     {
         glUseProgram(shaderProgram);
 
@@ -142,7 +142,7 @@ void main()
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
-        glUniform4f(glGetUniformLocation(shaderProgram, "color"),color.x,color.y,color.z,color.w);
+        glUniform4f(glGetUniformLocation(shaderProgram, "color"), color.x, color.y, color.z, color.w);
 
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -151,37 +151,59 @@ void main()
 
 };
 
+GLuint depthBuffer;
 void start_vr_render()
 {
+    //deph
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    
 
     glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     render_shapes::setup_cube_render();
 }
 
-void before_vr_render() {
+void before_vr_render()
+{
     vr_pose pose = get_vr_traker_pose(vr_headset);
-    
 }
 
 unsigned char c = 0;
 void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat4 view, glm::mat4 projection)
 {
+
+    //deph
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    render_shapes::render_cube(view,projection, glm::vec3(0.0,0.0,0.0),glm::vec4(1.0,1.0,1.0,1.0), glm::vec3(2.0,0.05,2.0));
+    render_shapes::render_cube(view, projection, glm::vec3(0.0, 0.0, 0.0), glm::vec4(1.0, 1.0, 1.0, 1.0), glm::vec3(2.0, 0.05, 2.0));
 
     vr_pose pose = get_vr_traker_pose(vr_left_hand);
-    render_shapes::render_cube(view,projection, pose.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.02,0.02,0.1),pose.quaternion);
+    render_shapes::render_cube(view, projection, pose.position, glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0.02, 0.02, 0.1), pose.quaternion);
     pose = get_vr_traker_pose(vr_right_hand);
-    render_shapes::render_cube(view,projection, pose.position,glm::vec4(1.0,0.0,0.0,1.0), glm::vec3(0.02,0.02,0.1),pose.quaternion);
+    render_shapes::render_cube(view, projection, pose.position, glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0.02, 0.02, 0.1), pose.quaternion);
 
-    for(vr_pose p : get_vr_joints_infos(vr_left_hand)){
-        render_shapes::render_cube(view,projection, p.position,glm::vec4(0.0,1.0,0.0,1.0), glm::vec3(0.01,0.01,0.01),p.quaternion);
+    int i = 0;
+    std::vector<vr_pose> joint_list = get_vr_joints_infos(vr_left_hand);
+    for (vr_pose p : joint_list)
+    {
+        i++;
+        float color_power =  (float)joint_list.size() / (float)i;
+        render_shapes::render_cube(view, projection, p.position, glm::vec4(0.5 / color_power, 1.0 / color_power, 0.5 / color_power, 1.0), glm::vec3(0.01, 0.01, 0.01), p.quaternion);
     }
-    for(vr_pose p : get_vr_joints_infos(vr_right_hand)){
-        render_shapes::render_cube(view,projection, p.position,glm::vec4(0.0,1.0,0.0,1.0), glm::vec3(0.01,0.01,0.01),p.quaternion);
+
+    i = 0;
+    joint_list = get_vr_joints_infos(vr_right_hand);
+    for (vr_pose p : joint_list)
+    {
+        i++;
+        float color_power =  (float)joint_list.size() / (float)i;
+        render_shapes::render_cube(view, projection, p.position, glm::vec4(0.0, 1.0 / color_power, 0.0, 1.0), glm::vec3(0.01, 0.01, 0.01), p.quaternion);
     }
+    
+    ////deph
 }
 
 void after_vr_render() {}
@@ -194,9 +216,9 @@ int main()
 {
     std::cout << "Hello World!\n";
     set_sdl_event_manager(event_manager);
-    start_vr("test vr",start_vr_render);
+    start_vr("test vr", start_vr_render);
     update_vr(before_vr_render, update_vr_render, after_vr_render);
     end_vr(end_vr_render);
-    
+
     return 0;
 }
