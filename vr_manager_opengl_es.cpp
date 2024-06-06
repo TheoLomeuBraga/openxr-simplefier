@@ -1118,6 +1118,7 @@ std::map<unsigned char, float> actions_map = {
 	std::pair<unsigned char, float>(10, 0.0),
 	std::pair<unsigned char, float>(11, 0.0),
 	std::pair<unsigned char, float>(12, 0.0),
+	std::pair<unsigned char, float>(13, 0.0),
 };
 
 std::map<unsigned char, vr_pose> traker_pose_map = {
@@ -1180,7 +1181,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
-	/*
+	
 
 	XrAction grab_action_float;
 	{
@@ -1338,7 +1339,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 	
 
-	*/
+	
 
 	// quest 2
 	/*
@@ -1406,7 +1407,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/grip/pose", &grip_pose_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/grip/pose", &grip_pose_path[HAND_RIGHT]);
 
-	/*
+	
 
 	XrPath grab_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/value", &grab_path[HAND_LEFT]);
@@ -1450,7 +1451,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	XrPath menu_path;
 	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path);
 
-	//*/
+	
 
 	{
 		XrPath interaction_profile_path;
@@ -1463,7 +1464,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
 
-			/*
+			
 			
 			{.action = grab_action_float, .binding = grab_path[HAND_LEFT]},
 			{.action = grab_action_float, .binding = grab_path[HAND_RIGHT]},
@@ -1493,7 +1494,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = teleport_action_boolean, .binding = teleport_path},
 
 			{.action = menu_action_boolean, .binding = menu_path},
-			*/
+			
 
 		};
 

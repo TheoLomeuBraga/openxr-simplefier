@@ -59,13 +59,14 @@ enum vr_action{
     vr_use_r = 3,
     vr_use_2_l = 4,
     vr_use_2_r = 5,
-    vr_menu = 6,
-    vr_move_x = 7,
-    vr_move_y = 8,
-    vr_move_z = 9,
-    vr_rotate = 10,
-    vr_teleport = 11,
-    vr_special = 12,
+    vr_use_3_l = 6,
+    vr_use_3_r = 7,
+    vr_menu = 8,
+    vr_move_x = 9,
+    vr_move_y = 10,
+    vr_move_z = 11,
+    vr_rotate = 12,
+    vr_teleport = 13,
 };
 
 float get_vr_action(vr_action action);
