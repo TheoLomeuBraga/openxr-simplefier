@@ -1295,7 +1295,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_VECTOR2F_INPUT,
 										  .countSubactionPaths = 1,
-										  .subactionPaths = self.hand_paths.data()};
+										  .subactionPaths = &self.hand_paths[HAND_LEFT]};
 		strcpy(action_info.actionName, "move_x_y");
 		strcpy(action_info.localizedActionName, "Move x y");
 
@@ -1304,33 +1304,18 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
-	XrAction move_y_action_float;
+	XrAction move_rotation_y_action_vec_2;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
-										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
+										  .actionType = XR_ACTION_TYPE_VECTOR2F_INPUT,
 										  .countSubactionPaths = 1,
-										  .subactionPaths = self.hand_paths.data()};
+										  .subactionPaths = &self.hand_paths[HAND_RIGHT]};
 		strcpy(action_info.actionName, "move_y");
 		strcpy(action_info.localizedActionName, "Move y");
 
-		result = xrCreateAction(main_actionset, &action_info, &move_y_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &move_rotation_y_action_vec_2);
 		if (!xr_result(self.instance, result, "failed to create move y action"))
-			return;
-	}
-
-	XrAction rotate_action_float;
-	{
-		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
-										  .next = NULL,
-										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
-										  .countSubactionPaths = 1,
-										  .subactionPaths = self.hand_paths.data()};
-		strcpy(action_info.actionName, "rotate");
-		strcpy(action_info.localizedActionName, "Rotate");
-
-		result = xrCreateAction(main_actionset, &action_info, &rotate_action_float);
-		if (!xr_result(self.instance, result, "failed to create rotate action"))
 			return;
 	}
 
@@ -1340,7 +1325,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
 										  .countSubactionPaths = 1,
-										  .subactionPaths = self.hand_paths.data()};
+										  .subactionPaths = &self.hand_paths[HAND_LEFT]};
 		strcpy(action_info.actionName, "menu");
 		strcpy(action_info.localizedActionName, "Menu");
 
@@ -1355,7 +1340,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
 										  .countSubactionPaths = 1,
-										  .subactionPaths = self.hand_paths.data()};
+										  .subactionPaths = &self.hand_paths[HAND_LEFT]};
 		strcpy(action_info.actionName, "teleport");
 		strcpy(action_info.localizedActionName, "Teleport");
 
@@ -1453,11 +1438,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	XrPath movement_x_z_path;
 	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick", &movement_x_z_path);
 
-	XrPath movement_z_path;
-	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/y", &movement_z_path);
-
-	XrPath rotate_path;
-	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/x", &rotate_path);
+	XrPath movement_rotation_y_path;
+	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick", &movement_rotation_y_path);
 
 	XrPath teleport_path;
 	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/click", &teleport_path);
@@ -1494,12 +1476,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
 			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]},
 
-			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
-			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]},
-
 			{.action = move_x_z_action_vec_2, .binding = movement_x_z_path},
-			{.action = move_y_action_float, .binding = movement_z_path},
-			{.action = rotate_action_float, .binding = rotate_path},
+			{.action = move_rotation_y_action_vec_2, .binding = movement_rotation_y_path},
 			{.action = teleport_action_boolean, .binding = teleport_path},
 
 			{.action = menu_action_boolean, .binding = menu_path},
@@ -1780,7 +1758,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		XrActionStateBoolean teleport_value;
 		XrActionStateFloat rotate_value;
 		XrActionStateVector2f movement_x_z_value;
-		XrActionStateFloat movement_y_value;
+		XrActionStateVector2f movement_rotation_y_value;
 
 		XrSpaceLocation hand_locations[HAND_COUNT];
 		bool hand_locations_valid[HAND_COUNT];
@@ -1827,28 +1805,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			XrActionStateGetInfo get_info = {
 				.type = XR_TYPE_ACTION_STATE_GET_INFO,
 				.next = NULL,
-				.action = rotate_action_float,
-				.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
-			};
-			result = xrGetActionStateFloat(self.session, &get_info, &rotate_value);
-			xr_result(self.instance, result, "failed to get rotate action state");
-
-			if (rotate_value.isActive)
-			{
-				float rotation_amount = rotate_value.currentState;
-				actions_map[vr_rotate] = rotation_amount;
-			}
-			else
-			{
-				// A ação de rotação não está ativa
-				actions_map[vr_rotate] = 0.0;
-			}
-		}
-
-		{
-			XrActionStateGetInfo get_info = {
-				.type = XR_TYPE_ACTION_STATE_GET_INFO,
-				.next = NULL,
 				.action = move_x_z_action_vec_2,
 				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
 			};
@@ -1873,20 +1829,22 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			XrActionStateGetInfo get_info = {
 				.type = XR_TYPE_ACTION_STATE_GET_INFO,
 				.next = NULL,
-				.action = move_y_action_float,
+				.action = move_rotation_y_action_vec_2,
 				.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
 			};
-			result = xrGetActionStateFloat(self.session, &get_info, &movement_y_value);
-			xr_result(self.instance, result, "failed to get movement z action state");
+			result = xrGetActionStateVector2f(self.session, &get_info, &movement_rotation_y_value);
+			xr_result(self.instance, result, "failed to get rotation y action state");
 
-			if (movement_y_value.isActive)
+			if (movement_rotation_y_value.isActive)
 			{
-				float movement_z = movement_y_value.currentState;
-				actions_map[vr_move_y] = movement_z;
+				XrVector2f movement = movement_rotation_y_value.currentState;
+				actions_map[vr_rotate] = movement.x;
+				actions_map[vr_move_y] = movement.y;
 			}
 			else
 			{
-				// A ação de movimento z não está ativa
+				// A ação de movimento não está ativa
+				actions_map[vr_rotate] = 0.0;
 				actions_map[vr_move_y] = 0.0;
 			}
 		}

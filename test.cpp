@@ -176,9 +176,7 @@ void before_vr_render()
         std::cout << "teleport\n";
     }
 
-    if(get_vr_action(vr_rotate)){
-        std::cout << "vr_rotate: " << get_vr_action(vr_rotate) << std::endl;
-    }
+    std::cout << "vr_rotate: " << get_vr_action(vr_rotate) << std::endl;
 
 
 }
