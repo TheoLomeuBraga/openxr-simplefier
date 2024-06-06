@@ -509,6 +509,8 @@ void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event))
 XrExample self;
 void start_vr(std::string name,void(start_render)(void))
 {
+	window_name = name;
+
 	XrResult result;
 
 	// --- Make sure runtime supports the OpenGL extension
@@ -589,7 +591,7 @@ void start_vr(std::string name,void(start_render)(void))
 		nullptr,
 		0,
 		{
-			"OpenXR OpenGL Example",
+			"app_name",
 			1,
 			"Custom",
 			0,
@@ -599,6 +601,10 @@ void start_vr(std::string name,void(start_render)(void))
 		NULL,
 		(uint32_t)enabled_ext_count,
 		enabled_exts};
+
+	
+
+	strncpy(instance_create_info.applicationInfo.applicationName, window_name.c_str(), sizeof(instance_create_info.applicationInfo.applicationName));
 
 	result = xrCreateInstance(&instance_create_info, &self.instance);
 	if (!xr_result(NULL, result, "Failed to create XR instance."))
@@ -680,7 +686,7 @@ void start_vr(std::string name,void(start_render)(void))
 	// Other APIs may have more useful requirements.
 	check_opengl_version(&opengl_reqs);
 
-	window_name = name;
+	
 
 #ifdef _WIN32
 	self.graphics_binding_gl = XrGraphicsBindingOpenGLWin32KHR{
@@ -1191,6 +1197,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
+	
+
 	XrAction use_action_float;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
@@ -1201,10 +1209,12 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.actionName, "use");
 		strcpy(action_info.localizedActionName, "Use");
 
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &use_action_float);
 		if (!xr_result(self.instance, result, "failed to create use action"))
 			return;
 	}
+
+	
 
 	XrAction use_2_action_boolean;
 	{
@@ -1216,8 +1226,23 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.actionName, "use_2");
 		strcpy(action_info.localizedActionName, "Use 2");
 
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &use_2_action_boolean);
 		if (!xr_result(self.instance, result, "failed to create use 2 action"))
+			return;
+	}
+
+	XrAction use_3_action_boolean;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "use_3");
+		strcpy(action_info.localizedActionName, "Use 3");
+
+		result = xrCreateAction(main_actionset, &action_info, &use_3_action_boolean);
+		if (!xr_result(self.instance, result, "failed to create use 3 action"))
 			return;
 	}
 
@@ -1246,7 +1271,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.actionName, "move_x_y");
 		strcpy(action_info.localizedActionName, "Move x y");
 
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &move_x_y_action_vec_2);
 		if (!xr_result(self.instance, result, "failed to create Move x y action"))
 			return;
 	}
@@ -1261,7 +1286,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.actionName, "move_z");
 		strcpy(action_info.localizedActionName, "Move z");
 
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &move_z_action_float);
 		if (!xr_result(self.instance, result, "failed to create move z action"))
 			return;
 	}
@@ -1276,7 +1301,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.actionName, "rotate");
 		strcpy(action_info.localizedActionName, "Rotate");
 
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &rotate_action_float);
 		if (!xr_result(self.instance, result, "failed to create rotate action"))
 			return;
 	}
@@ -1291,7 +1316,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.actionName, "menu");
 		strcpy(action_info.localizedActionName, "Menu");
 
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &menu_action_boolean);
 		if (!xr_result(self.instance, result, "failed to create menu action"))
 			return;
 	}
@@ -1306,25 +1331,12 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.actionName, "teleport");
 		strcpy(action_info.localizedActionName, "Teleport");
 
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
+		result = xrCreateAction(main_actionset, &action_info, &teleport_action_boolean);
 		if (!xr_result(self.instance, result, "failed to create teleport action"))
 			return;
 	}
 
-	XrAction special_action_boolean;
-	{
-		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
-										  .next = NULL,
-										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
-										  .countSubactionPaths = HAND_RIGHT,
-										  .subactionPaths = self.hand_paths.data()};
-		strcpy(action_info.actionName, "special");
-		strcpy(action_info.localizedActionName, "Special");
-
-		result = xrCreateAction(main_actionset, &action_info, &grab_action_float);
-		if (!xr_result(self.instance, result, "failed to create special action"))
-			return;
-	}
+	
 
 	*/
 
@@ -1400,13 +1412,21 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/value", &grab_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/value", &grab_path[HAND_RIGHT]);
 
+	
+
 	XrPath use_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/trigger/value", &use_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/trigger/value", &use_path[HAND_RIGHT]);
 
+	
+
 	XrPath use_2_path[HAND_COUNT];
-	xrStringToPath(self.instance, "/user/hand/left/input/x/click", &use_2_path[HAND_LEFT]);
-	xrStringToPath(self.instance, "/user/hand/right/input/a/click", &use_2_path[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left/input/x", &use_2_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/a", &use_2_path[HAND_RIGHT]);
+
+	XrPath use_3_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/y", &use_3_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/b", &use_3_path[HAND_RIGHT]);
 
 	XrPath vibrate_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/output/haptic", &vibrate_path[HAND_LEFT]);
@@ -1425,13 +1445,12 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/click", &teleport_path);
 
 	XrPath special_path;
-	xrStringToPath(self.instance, "/user/hand/right/input/b/click", &special_path);
+	xrStringToPath(self.instance, "/user/hand/right/input/b", &special_path);
 
-	XrPath menu_path[2];
-	xrStringToPath(self.instance, "/user/hand/left/input/y/click", &menu_path[0]);
-	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path[1]);
+	XrPath menu_path;
+	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path);
 
-	*/
+	//*/
 
 	{
 		XrPath interaction_profile_path;
@@ -1445,14 +1464,22 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
 
 			/*
+			
 			{.action = grab_action_float, .binding = grab_path[HAND_LEFT]},
 			{.action = grab_action_float, .binding = grab_path[HAND_RIGHT]},
+
+			
 
 			{.action = use_action_float, .binding = use_path[HAND_LEFT]},
 			{.action = use_action_float, .binding = use_path[HAND_RIGHT]},
 
+			
+
 			{.action = use_2_action_boolean, .binding = use_2_path[HAND_LEFT]},
 			{.action = use_2_action_boolean, .binding = use_2_path[HAND_RIGHT]},
+
+			{.action = use_3_action_boolean, .binding = use_3_path[HAND_LEFT]},
+			{.action = use_3_action_boolean, .binding = use_3_path[HAND_RIGHT]},
 
 			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
 			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]},
@@ -1465,10 +1492,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = rotate_action_float, .binding = rotate_path},
 			{.action = teleport_action_boolean, .binding = teleport_path},
 
-			{.action = special_action_boolean, .binding = special_path},
-
-			{.action = menu_action_boolean, .binding = menu_path[0]},
-			{.action = menu_action_boolean, .binding = menu_path[1]},
+			{.action = menu_action_boolean, .binding = menu_path},
 			*/
 
 		};
