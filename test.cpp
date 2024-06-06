@@ -167,7 +167,20 @@ void start_vr_render()
 
 void before_vr_render()
 {
-    vr_pose pose = get_vr_traker_pose(vr_headset);
+    if(get_vr_action(vr_menu) == 1.0){
+        std::cout << "i will stop now\n";
+        stop_vr();
+    }
+
+    if(get_vr_action(vr_teleport)){
+        std::cout << "teleport\n";
+    }
+
+    if(get_vr_action(vr_rotate)){
+        std::cout << "vr_rotate: " << get_vr_action(vr_rotate) << std::endl;
+    }
+
+
 }
 
 unsigned char c = 0;

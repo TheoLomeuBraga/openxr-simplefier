@@ -257,6 +257,7 @@ std::string h_p_str(int hand)
 		return "invalid";
 }
 
+
 class XrExample
 {
 public:
@@ -336,6 +337,10 @@ public:
 	} hand_tracking;
 } xr_example;
 
+XrExample self;
+
+
+
 bool xr_result(XrInstance instance, XrResult result, const char *format, ...)
 {
 	if (XR_SUCCEEDED(result))
@@ -356,6 +361,28 @@ bool xr_result(XrInstance instance, XrResult result, const char *format, ...)
 
 	delete[] formatRes;
 	return false;
+}
+
+void reorientate(glm::vec3 new_position, glm::quat new_rotation)
+{
+
+	XrPosef teleport_pose = {
+		.orientation = {.x = new_rotation.x, .y = new_rotation.y, .z = new_rotation.z, .w = new_rotation.w},
+		.position = {.x = new_position.x, .y = new_position.y, .z = new_position.z}};
+
+	// Atualizando o espaço de referência com a nova pose de teleporte
+	XrReferenceSpaceCreateInfo teleport_space_create_info = {
+		.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
+		.next = NULL,
+		.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL,
+		.poseInReferenceSpace = teleport_pose};
+
+	XrSpace teleport_space;
+	XrResult result = xrCreateReferenceSpace(self.session, &teleport_space_create_info, &teleport_space);
+	if (!xr_result(self.instance, result, "Failed to create teleport reference space!"))
+	{
+		return;
+	}
 }
 
 void sdl_handle_events(SDL_Event event, bool *running);
@@ -506,8 +533,8 @@ void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event))
 	event_manager = sdl_event_manager;
 }
 
-XrExample self;
-void start_vr(std::string name,void(start_render)(void))
+
+void start_vr(std::string name, void(start_render)(void))
 {
 	window_name = name;
 
@@ -602,8 +629,6 @@ void start_vr(std::string name,void(start_render)(void))
 		(uint32_t)enabled_ext_count,
 		enabled_exts};
 
-	
-
 	strncpy(instance_create_info.applicationInfo.applicationName, window_name.c_str(), sizeof(instance_create_info.applicationInfo.applicationName));
 
 	result = xrCreateInstance(&instance_create_info, &self.instance);
@@ -685,8 +710,6 @@ void start_vr(std::string name,void(start_render)(void))
 	// On OpenGL we never fail this check because the version requirement is not useful.
 	// Other APIs may have more useful requirements.
 	check_opengl_version(&opengl_reqs);
-
-	
 
 #ifdef _WIN32
 	self.graphics_binding_gl = XrGraphicsBindingOpenGLWin32KHR{
@@ -1132,22 +1155,32 @@ XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
 XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
 std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand)
 {
-	XrHandJointLocationEXT* hand_joints = nullptr;
-	if(hand == vr_left_hand){
+	XrHandJointLocationEXT *hand_joints = nullptr;
+	if (hand == vr_left_hand)
+	{
 		hand_joints = joints[HAND_LEFT];
-	}else if(hand == vr_right_hand){
+	}
+	else if (hand == vr_right_hand)
+	{
 		hand_joints = joints[HAND_RIGHT];
-	}else{
+	}
+	else
+	{
 		return {};
 	}
 	std::vector<vr_pose> ret;
-	for(int i = 0 ; i < XR_HAND_JOINT_COUNT_EXT; i++){
+	for (int i = 0; i < XR_HAND_JOINT_COUNT_EXT; i++)
+	{
 		XrPosef p = hand_joints[i].pose;
-		ret.push_back({glm::vec3(p.position.x,p.position.y,p.position.z),glm::quat(p.orientation.w,p.orientation.x,p.orientation.y,p.orientation.z)});
+		ret.push_back({glm::vec3(p.position.x, p.position.y, p.position.z), glm::quat(p.orientation.w, p.orientation.x, p.orientation.y, p.orientation.z)});
 	}
 	return ret;
 }
 
+void stop_vr()
+{
+	continue_vr = false;
+}
 
 void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
@@ -1181,8 +1214,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
-	
-
 	XrAction grab_action_float;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
@@ -1198,8 +1229,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
-	
-
 	XrAction use_action_float;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
@@ -1214,8 +1243,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		if (!xr_result(self.instance, result, "failed to create use action"))
 			return;
 	}
-
-	
 
 	XrAction use_2_action_boolean;
 	{
@@ -1262,33 +1289,33 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
-	XrAction move_x_y_action_vec_2;
+	XrAction move_x_z_action_vec_2;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_VECTOR2F_INPUT,
-										  .countSubactionPaths = HAND_LEFT,
+										  .countSubactionPaths = 1,
 										  .subactionPaths = self.hand_paths.data()};
 		strcpy(action_info.actionName, "move_x_y");
 		strcpy(action_info.localizedActionName, "Move x y");
 
-		result = xrCreateAction(main_actionset, &action_info, &move_x_y_action_vec_2);
+		result = xrCreateAction(main_actionset, &action_info, &move_x_z_action_vec_2);
 		if (!xr_result(self.instance, result, "failed to create Move x y action"))
 			return;
 	}
 
-	XrAction move_z_action_float;
+	XrAction move_y_action_float;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
-										  .countSubactionPaths = HAND_RIGHT,
+										  .countSubactionPaths = 1,
 										  .subactionPaths = self.hand_paths.data()};
-		strcpy(action_info.actionName, "move_z");
-		strcpy(action_info.localizedActionName, "Move z");
+		strcpy(action_info.actionName, "move_y");
+		strcpy(action_info.localizedActionName, "Move y");
 
-		result = xrCreateAction(main_actionset, &action_info, &move_z_action_float);
-		if (!xr_result(self.instance, result, "failed to create move z action"))
+		result = xrCreateAction(main_actionset, &action_info, &move_y_action_float);
+		if (!xr_result(self.instance, result, "failed to create move y action"))
 			return;
 	}
 
@@ -1297,7 +1324,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_FLOAT_INPUT,
-										  .countSubactionPaths = HAND_RIGHT,
+										  .countSubactionPaths = 1,
 										  .subactionPaths = self.hand_paths.data()};
 		strcpy(action_info.actionName, "rotate");
 		strcpy(action_info.localizedActionName, "Rotate");
@@ -1312,7 +1339,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
-										  .countSubactionPaths = HAND_LEFT,
+										  .countSubactionPaths = 1,
 										  .subactionPaths = self.hand_paths.data()};
 		strcpy(action_info.actionName, "menu");
 		strcpy(action_info.localizedActionName, "Menu");
@@ -1327,7 +1354,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
 										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
-										  .countSubactionPaths = HAND_LEFT,
+										  .countSubactionPaths = 1,
 										  .subactionPaths = self.hand_paths.data()};
 		strcpy(action_info.actionName, "teleport");
 		strcpy(action_info.localizedActionName, "Teleport");
@@ -1336,10 +1363,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		if (!xr_result(self.instance, result, "failed to create teleport action"))
 			return;
 	}
-
-	
-
-	
 
 	// quest 2
 	/*
@@ -1407,34 +1430,28 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/grip/pose", &grip_pose_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/grip/pose", &grip_pose_path[HAND_RIGHT]);
 
-	
-
 	XrPath grab_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/value", &grab_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/value", &grab_path[HAND_RIGHT]);
-
-	
 
 	XrPath use_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/trigger/value", &use_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/trigger/value", &use_path[HAND_RIGHT]);
 
-	
-
 	XrPath use_2_path[HAND_COUNT];
-	xrStringToPath(self.instance, "/user/hand/left/input/x", &use_2_path[HAND_LEFT]);
-	xrStringToPath(self.instance, "/user/hand/right/input/a", &use_2_path[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left/input/x/click", &use_2_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/a/click", &use_2_path[HAND_RIGHT]);
 
 	XrPath use_3_path[HAND_COUNT];
-	xrStringToPath(self.instance, "/user/hand/left/input/y", &use_3_path[HAND_LEFT]);
-	xrStringToPath(self.instance, "/user/hand/right/input/b", &use_3_path[HAND_RIGHT]);
+	xrStringToPath(self.instance, "/user/hand/left/input/y/click", &use_3_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/b/click", &use_3_path[HAND_RIGHT]);
 
 	XrPath vibrate_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/output/haptic", &vibrate_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/output/haptic", &vibrate_path[HAND_RIGHT]);
 
-	XrPath movement_x_y_path;
-	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick", &movement_x_y_path);
+	XrPath movement_x_z_path;
+	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick", &movement_x_z_path);
 
 	XrPath movement_z_path;
 	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick/y", &movement_z_path);
@@ -1451,8 +1468,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	XrPath menu_path;
 	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path);
 
-	
-
 	{
 		XrPath interaction_profile_path;
 		result = xrStringToPath(self.instance, "/interaction_profiles/oculus/touch_controller",
@@ -1464,17 +1479,11 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
 
-			
-			
 			{.action = grab_action_float, .binding = grab_path[HAND_LEFT]},
 			{.action = grab_action_float, .binding = grab_path[HAND_RIGHT]},
 
-			
-
 			{.action = use_action_float, .binding = use_path[HAND_LEFT]},
 			{.action = use_action_float, .binding = use_path[HAND_RIGHT]},
-
-			
 
 			{.action = use_2_action_boolean, .binding = use_2_path[HAND_LEFT]},
 			{.action = use_2_action_boolean, .binding = use_2_path[HAND_RIGHT]},
@@ -1488,13 +1497,12 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
 			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]},
 
-			{.action = move_x_y_action_vec_2, .binding = movement_x_y_path},
-			{.action = move_z_action_float, .binding = movement_z_path},
+			{.action = move_x_z_action_vec_2, .binding = movement_x_z_path},
+			{.action = move_y_action_float, .binding = movement_z_path},
 			{.action = rotate_action_float, .binding = rotate_path},
 			{.action = teleport_action_boolean, .binding = teleport_path},
 
 			{.action = menu_action_boolean, .binding = menu_path},
-			
 
 		};
 
@@ -1556,7 +1564,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		{
 			if (sdl_event.type == SDL_QUIT)
 			{
-				continue_vr = false;
+				stop_vr();
 				break;
 			}
 			event_manager(sdl_event);
@@ -1764,9 +1772,125 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		// query each value / location with a subaction path != XR_NULL_PATH
 		// resulting in individual values per hand/.
 		XrActionStateFloat grab_value[HAND_COUNT];
-		XrActionStateFloat throttle_value[HAND_COUNT];
+		XrActionStateFloat use_value[HAND_COUNT];
+		XrActionStateBoolean use_2_value[HAND_COUNT];
+		XrActionStateBoolean use_3_value[HAND_COUNT];
+
+		XrActionStateBoolean menu_value;
+		XrActionStateBoolean teleport_value;
+		XrActionStateFloat rotate_value;
+		XrActionStateVector2f movement_x_z_value;
+		XrActionStateFloat movement_y_value;
+
 		XrSpaceLocation hand_locations[HAND_COUNT];
 		bool hand_locations_valid[HAND_COUNT];
+
+		{
+			XrActionStateBoolean menu_state;
+			XrActionStateGetInfo get_info = {
+				.type = XR_TYPE_ACTION_STATE_GET_INFO,
+				.next = NULL,
+				.action = menu_action_boolean,
+				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+			};
+			result = xrGetActionStateBoolean(self.session, &get_info, &menu_state);
+			if (menu_state.isActive){
+				actions_map[vr_menu] = menu_state.currentState;
+			}
+		}
+
+		{
+			XrActionStateGetInfo get_info = {
+				.type = XR_TYPE_ACTION_STATE_GET_INFO,
+				.next = NULL,
+				.action = teleport_action_boolean,
+				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+			};
+			result = xrGetActionStateBoolean(self.session, &get_info, &teleport_value);
+			xr_result(self.instance, result, "failed to get teleport action state");
+
+			if (teleport_value.isActive)
+			{
+				bool is_teleport_pressed = teleport_value.currentState;
+				if (is_teleport_pressed)
+				{
+					actions_map[vr_teleport] = 1.0;
+				}
+				else
+				{
+					actions_map[vr_teleport] = 0.0;
+				}
+			}
+		}
+
+		{
+			XrActionStateGetInfo get_info = {
+				.type = XR_TYPE_ACTION_STATE_GET_INFO,
+				.next = NULL,
+				.action = rotate_action_float,
+				.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+			};
+			result = xrGetActionStateFloat(self.session, &get_info, &rotate_value);
+			xr_result(self.instance, result, "failed to get rotate action state");
+
+			if (rotate_value.isActive)
+			{
+				float rotation_amount = rotate_value.currentState;
+				actions_map[vr_rotate] = rotation_amount;
+			}
+			else
+			{
+				// A ação de rotação não está ativa
+				actions_map[vr_rotate] = 0.0;
+			}
+		}
+
+		{
+			XrActionStateGetInfo get_info = {
+				.type = XR_TYPE_ACTION_STATE_GET_INFO,
+				.next = NULL,
+				.action = move_x_z_action_vec_2,
+				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+			};
+			result = xrGetActionStateVector2f(self.session, &get_info, &movement_x_z_value);
+			xr_result(self.instance, result, "failed to get movement x y action state");
+
+			if (movement_x_z_value.isActive)
+			{
+				XrVector2f movement = movement_x_z_value.currentState;
+				actions_map[vr_move_x] = movement.x;
+				actions_map[vr_move_z] = movement.y;
+			}
+			else
+			{
+				// A ação de movimento não está ativa
+				actions_map[vr_move_x] = 0.0;
+				actions_map[vr_move_z] = 0.0;
+			}
+		}
+
+		{
+			XrActionStateGetInfo get_info = {
+				.type = XR_TYPE_ACTION_STATE_GET_INFO,
+				.next = NULL,
+				.action = move_y_action_float,
+				.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+			};
+			result = xrGetActionStateFloat(self.session, &get_info, &movement_y_value);
+			xr_result(self.instance, result, "failed to get movement z action state");
+
+			if (movement_y_value.isActive)
+			{
+				float movement_z = movement_y_value.currentState;
+				actions_map[vr_move_y] = movement_z;
+			}
+			else
+			{
+				// A ação de movimento z não está ativa
+				actions_map[vr_move_y] = 0.0;
+			}
+		}
+
 		for (int i = 0; i < HAND_COUNT; i++)
 		{
 			// hands
@@ -2051,7 +2175,6 @@ float get_vr_action(vr_action action)
 void vibrate_traker(vr_traker_type traker, float power)
 {
 }
-
 
 void end_vr(void(clean_render)(void))
 {
