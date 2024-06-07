@@ -165,6 +165,15 @@ void start_vr_render()
     render_shapes::setup_cube_render();
 }
 
+glm::quat rotationToQuaternion(float angle_degrees, const glm::vec3& axis) {
+    // Converta o ângulo de graus para radianos
+    float angle_radians = glm::radians(angle_degrees);
+
+    // Crie um quaternion a partir do ângulo em radianos e do eixo de rotação
+    glm::quat quaternion = glm::angleAxis(angle_radians, glm::normalize(axis));
+
+    return quaternion;
+}
 void before_vr_render()
 {
     if(get_vr_action(vr_menu) == 1.0){
@@ -172,14 +181,10 @@ void before_vr_render()
         stop_vr();
     }
 
-    if(get_vr_action(vr_teleport)){
-        std::cout << "teleport\n";
-        reorientate(glm::vec3(0,2,0),glm::quat(1.0,0.0,0.0,0.0));
-    }else{
-        reorientate(glm::vec3(0,0,0),glm::quat(1.0,0.0,0.0,0.0));
-    }
+    glm::vec3 new_poseition(get_vr_action(vr_move_x)*4.0,get_vr_action(vr_move_y)*4.0,get_vr_action(vr_move_z)*4.0);
+    reorientate(new_poseition,rotationToQuaternion(get_vr_action(vr_rotate) * 360.0,glm::vec3(0.0,1.0,0.0)));
 
-    std::cout << "vr_rotate: " << get_vr_action(vr_rotate) << std::endl;
+    
 
 
 }
@@ -193,6 +198,9 @@ void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     render_shapes::render_cube(view, projection, glm::vec3(0.0, 0.0, 0.0), glm::vec4(1.0, 1.0, 1.0, 1.0), glm::vec3(2.0, 0.05, 2.0));
+    render_shapes::render_cube(view, projection, glm::vec3(4.0, 0.0, 0.0), glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(2.0, 0.05, 2.0));
+    render_shapes::render_cube(view, projection, glm::vec3(0.0, 0.0, 4.0), glm::vec4(0.0, 0.0, 1.0, 1.0), glm::vec3(2.0, 0.05, 2.0));
+    render_shapes::render_cube(view, projection, glm::vec3(0.0, 2.0, 0.0), glm::vec4(0.0, 0.0, 0.0, 1.0), glm::vec3(2.0, 0.05, 2.0));
 
     vr_pose pose = get_vr_traker_pose(vr_left_hand);
     render_shapes::render_cube(view, projection, pose.position, glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0.02, 0.02, 0.1), pose.quaternion);

@@ -368,7 +368,7 @@ void reorientate(glm::vec3 new_position, glm::quat new_rotation)
 
 	XrPosef teleport_pose = {
 		.orientation = {.x = new_rotation.x, .y = new_rotation.y, .z = new_rotation.z, .w = new_rotation.w},
-		.position = {.x = new_position.x, .y = new_position.y, .z = new_position.z}};
+		.position = {.x = -new_position.x, .y = -new_position.y, .z = -new_position.z}};
 
 	// Atualizando o espaço de referência com a nova pose de teleporte
 	XrReferenceSpaceCreateInfo teleport_space_create_info = {
@@ -1816,8 +1816,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			if (movement_x_z_value.isActive)
 			{
 				XrVector2f movement = movement_x_z_value.currentState;
-				actions_map[vr_move_x] = movement.x;
-				actions_map[vr_move_z] = movement.y;
+				actions_map[vr_move_x] = movement.y;
+				actions_map[vr_move_z] = movement.x;
 			}
 			else
 			{
