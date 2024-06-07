@@ -274,7 +274,6 @@ std::string h_p_str(int hand)
 		return "invalid";
 }
 
-
 class XrExample
 {
 public:
@@ -355,8 +354,6 @@ public:
 } xr_example;
 
 XrExample self;
-
-
 
 bool xr_result(XrInstance instance, XrResult result, const char *format, ...)
 {
@@ -550,7 +547,6 @@ void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event))
 {
 	event_manager = sdl_event_manager;
 }
-
 
 void start_vr(std::string name, void(start_render)(void))
 {
@@ -1061,7 +1057,6 @@ void start_vr(std::string name, void(start_render)(void))
 		self.projection_views[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
 		self.projection_views[i].next = NULL;
 
-		
 		self.projection_views[i].subImage.swapchain = self.swapchains[i];
 		self.projection_views[i].subImage.imageArrayIndex = 0;
 		self.projection_views[i].subImage.imageRect.offset.x = 0;
@@ -1791,7 +1786,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
 			};
 			result = xrGetActionStateBoolean(self.session, &get_info, &menu_state);
-			if (menu_state.isActive){
+			if (menu_state.isActive)
+			{
 				actions_map[vr_menu] = menu_state.currentState;
 			}
 		}
@@ -1865,6 +1861,72 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 				// A ação de movimento não está ativa
 				actions_map[vr_rotate] = 0.0;
 				actions_map[vr_move_y] = 0.0;
+			}
+		}
+
+		{
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = grab_action_float,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateFloat(self.session, &get_info, &grab_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (grab_value[HAND_LEFT].isActive)
+				{
+					actions_map[vr_grab_l] = grab_value[HAND_LEFT].currentState;
+				}
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = grab_action_float,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateFloat(self.session, &get_info, &grab_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (grab_value[HAND_RIGHT].isActive)
+				{
+					actions_map[vr_grab_r] = grab_value[HAND_RIGHT].currentState;
+				}
+			}
+		}
+
+		{
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = use_action_float,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateFloat(self.session, &get_info, &use_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (use_value[HAND_LEFT].isActive)
+				{
+					actions_map[vr_use_l] = use_value[HAND_LEFT].currentState;
+				}
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = use_action_float,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateFloat(self.session, &get_info, &use_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (use_value[HAND_RIGHT].isActive)
+				{
+					actions_map[vr_use_r] = use_value[HAND_RIGHT].currentState;
+				}
 			}
 		}
 

@@ -1306,9 +1306,7 @@ void main_loop(XrExample *self)
 			result = xrLocateSpace(pose_action_spaces[i], self->play_space,
 								   frameState.predictedDisplayTime, &hand_locations[i]);
 			xr_result(self->instance, result, "failed to locate space %d!", i);
-			hand_locations_valid[i] =
-				//(spaceLocation[i].locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
-				(hand_locations[i].locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0;
+			hand_locations_valid[i] = (hand_locations[i].locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0;
 
 			/*
 			printf("Pose %d valid %d: %f %f %f %f, %f %f %f\n", i,
