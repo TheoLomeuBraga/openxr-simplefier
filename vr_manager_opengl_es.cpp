@@ -1930,6 +1930,72 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
+		{
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = use_2_action_boolean,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &use_2_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (use_2_value[HAND_LEFT].isActive)
+				{
+					actions_map[vr_use_2_l] = use_2_value[HAND_LEFT].currentState;
+				}
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = use_2_action_boolean,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &use_2_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (use_2_value[HAND_RIGHT].isActive)
+				{
+					actions_map[vr_use_2_r] = use_2_value[HAND_RIGHT].currentState;
+				}
+			}
+		}
+
+		{
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = use_3_action_boolean,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &use_3_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (use_3_value[HAND_LEFT].isActive)
+				{
+					actions_map[vr_use_3_l] = use_3_value[HAND_LEFT].currentState;
+				}
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = use_3_action_boolean,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &use_3_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (use_3_value[HAND_RIGHT].isActive)
+				{
+					actions_map[vr_use_3_r] = use_3_value[HAND_RIGHT].currentState;
+				}
+			}
+		}
+
 		for (int i = 0; i < HAND_COUNT; i++)
 		{
 			// hands
