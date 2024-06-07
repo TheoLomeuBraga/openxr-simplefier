@@ -4,33 +4,18 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <chrono>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_events.h>
+
 #include "glm/mat4x4.hpp"
 #include <glm/gtx/quaternion.hpp>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_events.h>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#ifdef _WIN32
-#define XR_USE_PLATFORM_WIN32
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GL/gl.h>
-#include <GL/wglext.h>
-#endif
 
-#ifdef X11
-#define XR_USE_PLATFORM_XLIB
-#define GLFW_EXPOSE_NATIVE_X11
-#include <GL/glx.h>
-#endif
-
-#define XR_USE_GRAPHICS_API_OPENGL
-#include "openxr/openxr.h"
-#include "openxr/openxr_platform.h"
 
 void set_sdl_event_manager(void(sdl_event_manager)(SDL_Event));
 
