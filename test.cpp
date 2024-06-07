@@ -174,6 +174,9 @@ void before_vr_render()
 
     if(get_vr_action(vr_teleport)){
         std::cout << "teleport\n";
+        reorientate(glm::vec3(0,2,0),glm::quat(1.0,0.0,0.0,0.0));
+    }else{
+        reorientate(glm::vec3(0,0,0),glm::quat(1.0,0.0,0.0,0.0));
     }
 
     std::cout << "vr_rotate: " << get_vr_action(vr_rotate) << std::endl;

@@ -383,6 +383,7 @@ void reorientate(glm::vec3 new_position, glm::quat new_rotation)
 	{
 		return;
 	}
+	self.play_space = teleport_space;
 }
 
 void sdl_handle_events(SDL_Event event, bool *running);
@@ -1043,6 +1044,7 @@ void start_vr(std::string name, void(start_render)(void))
 		self.projection_views[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
 		self.projection_views[i].next = NULL;
 
+		
 		self.projection_views[i].subImage.swapchain = self.swapchains[i];
 		self.projection_views[i].subImage.imageArrayIndex = 0;
 		self.projection_views[i].subImage.imageRect.offset.x = 0;
