@@ -208,12 +208,12 @@ void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat
     render_shapes::render_cube(view, projection, pose.position, glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0.02, 0.02, 0.1), pose.quaternion);
 
     //grab
-    render_shapes::render_cube(view, projection, glm::vec3(4.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
-    render_shapes::render_cube(view, projection, glm::vec3(-4.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(2.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(-2.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
 
     //triger
-    render_shapes::render_cube(view, projection, glm::vec3(4.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
-    render_shapes::render_cube(view, projection, glm::vec3(-4.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(2.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(-2.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
 
     int i = 0;
     std::vector<vr_pose> joint_list = get_vr_joints_infos(vr_left_hand);
