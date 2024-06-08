@@ -377,6 +377,7 @@ bool xr_result(XrInstance instance, XrResult result, const char *format, ...)
 	return false;
 }
 
+/*
 void reorientate(glm::vec3 new_position, glm::quat new_rotation)
 {
 
@@ -399,6 +400,45 @@ void reorientate(glm::vec3 new_position, glm::quat new_rotation)
 	}
 	self.play_space = teleport_space;
 }
+*/
+
+void reorientate(glm::vec3 new_position, glm::quat new_rotation)
+{
+    // Inverter a posição para aplicar a teleporte corretamente
+    glm::vec3 inverted_position = -new_position;
+
+    // Criar a nova pose de teleporte com a rotação aplicada à posição invertida
+    glm::vec3 rotated_position = glm::rotate(new_rotation, inverted_position);
+
+    XrPosef teleport_pose = {
+        .orientation = {.x = new_rotation.x, .y = new_rotation.y, .z = new_rotation.z, .w = new_rotation.w},
+        .position = {.x = rotated_position.x, .y = rotated_position.y, .z = rotated_position.z}
+    };
+
+    // Criar um novo espaço de referência com a nova pose de teleporte
+    XrReferenceSpaceCreateInfo teleport_space_create_info = {
+        .type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
+        .next = NULL,
+        .referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL,
+        .poseInReferenceSpace = teleport_pose
+    };
+
+    XrSpace teleport_space;
+    XrResult result = xrCreateReferenceSpace(self.session, &teleport_space_create_info, &teleport_space);
+    if (!xr_result(self.instance, result, "Failed to create teleport reference space!"))
+    {
+        return;
+    }
+
+    // Liberar o antigo espaço de referência, se necessário
+    if (self.play_space != XR_NULL_HANDLE)
+    {
+        xrDestroySpace(self.play_space);
+    }
+
+    self.play_space = teleport_space;
+}
+
 
 void sdl_handle_events(SDL_Event event, bool *running);
 
