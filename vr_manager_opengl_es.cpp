@@ -1233,7 +1233,6 @@ void stop_vr()
 	continue_vr = false;
 }
 
-
 XrAction vibration_action;
 void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
@@ -1327,7 +1326,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
-	
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
@@ -1548,6 +1546,44 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		if (!xr_result(self.instance, result, "failed to suggest bindings"))
 			return;
 	}
+
+	/*
+		Grip Pose
+		/user/hand/left/input/grip/pose
+		/user/hand/right/input/grip/pose
+
+	Squeeze
+		/user/hand/left/input/squeeze/click
+		/user/hand/right/input/squeeze/click
+
+	Trigger
+		/user/hand/left/input/trigger/value
+		/user/hand/right/input/trigger/value
+
+	Trackpad
+		/user/hand/left/input/trackpad
+		/user/hand/right/input/trackpad
+		/user/hand/left/input/trackpad/x
+		/user/hand/right/input/trackpad/x
+		/user/hand/left/input/trackpad/y
+		/user/hand/right/input/trackpad/y
+		/user/hand/left/input/trackpad/click
+		/user/hand/right/input/trackpad/click
+		/user/hand/left/input/trackpad/touch
+		/user/hand/right/input/trackpad/touch
+
+	Menu Button
+		/user/hand/left/input/menu/click
+		/user/hand/right/input/menu/click
+
+	Haptic Feedback
+		/user/hand/left/output/haptic
+		/user/hand/right/output/haptic
+
+
+	*/
+
+
 
 	XrSpace pose_action_spaces[HAND_COUNT];
 	{
@@ -2319,10 +2355,12 @@ float get_vr_action(vr_action action)
 void vibrate_traker(vr_traker_type traker, float power, float duration)
 {
 	XrPath hand_path;
-	if(traker == vr_left_hand){
+	if (traker == vr_left_hand)
+	{
 		hand_path = self.hand_paths[HAND_LEFT];
 	}
-	if(traker == vr_right_hand){
+	if (traker == vr_right_hand)
+	{
 		hand_path = self.hand_paths[HAND_RIGHT];
 	}
 
