@@ -1386,7 +1386,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	}
 
 	XrAction menu_action_boolean;
-	XrAction menu_click_action_boolean;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
@@ -1395,18 +1394,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 										  .subactionPaths = &self.hand_paths[HAND_LEFT]};
 		strcpy(action_info.actionName, "menu");
 		strcpy(action_info.localizedActionName, "Menu");
-
-		result = xrCreateAction(main_actionset, &action_info, &menu_action_boolean);
-		if (!xr_result(self.instance, result, "failed to create menu action"))
-			return;
-
-		action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
-										  .next = NULL,
-										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
-										  .countSubactionPaths = 1,
-										  .subactionPaths = &self.hand_paths[HAND_LEFT]};
-		strcpy(action_info.actionName, "menu_click");
-		strcpy(action_info.localizedActionName, "Menu click");
 
 		result = xrCreateAction(main_actionset, &action_info, &menu_action_boolean);
 		if (!xr_result(self.instance, result, "failed to create menu action"))
@@ -1618,9 +1605,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/click", &grab_click_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/click", &grab_click_path[HAND_RIGHT]);
 
-	XrPath menu_click_path;
-	xrStringToPath(self.instance, "/user/hand/left/input/menu/click", &menu_path);
-
 	/*
 	XrPath use_2_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/x/click", &use_2_path[HAND_LEFT]);
@@ -1654,18 +1638,26 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
 
+			
+
 			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_LEFT]},
 			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_RIGHT]},
+
+			
 
 			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
 			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]}, 
 
-			{.action = menu_click_action_boolean, .binding = menu_click_path},
+			
+			{.action = menu_action_boolean, .binding = menu_path},
 
-			/*
+			
+			
 
 			{.action = use_action_float, .binding = use_path[HAND_LEFT]},
 			{.action = use_action_float, .binding = use_path[HAND_RIGHT]},
+
+			/*
 
 			{.action = use_2_action_boolean, .binding = use_2_path[HAND_LEFT]},
 			{.action = use_2_action_boolean, .binding = use_2_path[HAND_RIGHT]},
@@ -1965,18 +1957,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 				.type = XR_TYPE_ACTION_STATE_GET_INFO,
 				.next = NULL,
 				.action = menu_action_boolean,
-				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
-			};
-			result = xrGetActionStateBoolean(self.session, &get_info, &menu_value);
-			if (menu_value.isActive)
-			{
-				actions_map[vr_menu] = menu_value.currentState;
-			}
-
-			get_info = {
-				.type = XR_TYPE_ACTION_STATE_GET_INFO,
-				.next = NULL,
-				.action = menu_click_action_boolean,
 				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
 			};
 			result = xrGetActionStateBoolean(self.session, &get_info, &menu_value);
