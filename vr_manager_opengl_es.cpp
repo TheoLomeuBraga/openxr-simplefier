@@ -1202,6 +1202,8 @@ std::map<unsigned char, vr_pose> traker_pose_map = {
 
 };
 
+
+
 XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
 XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
 std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand)
@@ -2270,7 +2272,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 		//use trakpad
 		{
-
+			
 		}
 
 		for (int i = 0; i < HAND_COUNT; i++)
