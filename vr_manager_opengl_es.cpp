@@ -1399,7 +1399,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		if (!xr_result(self.instance, result, "failed to create menu action"))
 			return;
 	}
-	
 
 	XrAction teleport_action_boolean;
 	{
@@ -1517,8 +1516,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	XrPath menu_path;
 	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path);
 
-	
-
 	{
 		XrPath interaction_profile_path;
 		result = xrStringToPath(self.instance, "/interaction_profiles/oculus/touch_controller",
@@ -1601,9 +1598,47 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 	*/
 
+	XrAction trackpad_vec_2;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_VECTOR2F_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "trackpad");
+		strcpy(action_info.localizedActionName, "Trackpad");
+
+		result = xrCreateAction(main_actionset, &action_info, &trackpad_vec_2);
+		if (!xr_result(self.instance, result, "failed to create Trackpad action"))
+			return;
+	}
+
+	XrAction trackpad_click_boolean;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "trackpad_click");
+		strcpy(action_info.localizedActionName, "Trackpad Click");
+
+		result = xrCreateAction(main_actionset, &action_info, &trackpad_click_boolean);
+		if (!xr_result(self.instance, result, "failed to create Trackpad Click action"))
+			return;
+	}
+
 	XrPath grab_click_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/click", &grab_click_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/click", &grab_click_path[HAND_RIGHT]);
+
+	XrPath trackpad_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/trackpad", &trackpad_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/trackpad", &trackpad_path[HAND_RIGHT]);
+
+	XrPath trackpad_click_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/trackpad/click", &trackpad_click_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/trackpad/click", &trackpad_click_path[HAND_RIGHT]);
 
 	/*
 	XrPath use_2_path[HAND_COUNT];
@@ -1638,40 +1673,22 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
 
-			
-
 			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_LEFT]},
 			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_RIGHT]},
 
-			
-
 			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
-			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]}, 
+			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]},
 
-			
 			{.action = menu_action_boolean, .binding = menu_path},
-
-			
-			
 
 			{.action = use_action_float, .binding = use_path[HAND_LEFT]},
 			{.action = use_action_float, .binding = use_path[HAND_RIGHT]},
 
-			/*
+			{.action = trackpad_vec_2, .binding = trackpad_path[HAND_LEFT]},
+			{.action = trackpad_vec_2, .binding = trackpad_path[HAND_RIGHT]},
 
-			{.action = use_2_action_boolean, .binding = use_2_path[HAND_LEFT]},
-			{.action = use_2_action_boolean, .binding = use_2_path[HAND_RIGHT]},
-
-			{.action = use_3_action_boolean, .binding = use_3_path[HAND_LEFT]},
-			{.action = use_3_action_boolean, .binding = use_3_path[HAND_RIGHT]},
-
-			{.action = move_x_z_action_vec_2, .binding = movement_x_z_path},
-			{.action = move_rotation_y_action_vec_2, .binding = movement_rotation_y_path},
-			{.action = teleport_action_boolean, .binding = teleport_path},
-
-			
-
-			*/
+			{.action = trackpad_click_boolean, .binding = trackpad_click_path[HAND_LEFT]},
+			{.action = trackpad_click_boolean, .binding = trackpad_click_path[HAND_RIGHT]},
 
 		};
 
@@ -1940,13 +1957,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 		// query each value / location with a subaction path != XR_NULL_PATH
 		// resulting in individual values per hand/.
-		
-		
-		
-		
-		
-		
-		
 
 		XrSpaceLocation hand_locations[HAND_COUNT];
 		bool hand_locations_valid[HAND_COUNT];
@@ -2207,6 +2217,60 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 					actions_map[vr_use_3_r] = use_3_value[HAND_RIGHT].currentState;
 				}
 			}
+		}
+
+
+		XrActionStateBoolean trakpad_click_value[HAND_COUNT];
+		{
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = trackpad_click_boolean,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &trakpad_click_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = trackpad_click_boolean,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &trakpad_click_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+			}
+		}
+
+		XrActionStateVector2f trakpad_value[HAND_COUNT];
+		{
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = trackpad_vec_2,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateVector2f(self.session, &get_info, &trakpad_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = trackpad_vec_2,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateVector2f(self.session, &get_info, &trakpad_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+			}
+		}
+
+		//use trakpad
+		{
+
 		}
 
 		for (int i = 0; i < HAND_COUNT; i++)
