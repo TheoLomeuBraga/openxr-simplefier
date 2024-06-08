@@ -404,41 +404,38 @@ void reorientate(glm::vec3 new_position, glm::quat new_rotation)
 
 void reorientate(glm::vec3 new_position, glm::quat new_rotation)
 {
-    // Inverter a posição para aplicar a teleporte corretamente
-    glm::vec3 inverted_position = -new_position;
+	// Inverter a posição para aplicar a teleporte corretamente
+	glm::vec3 inverted_position = -new_position;
 
-    // Criar a nova pose de teleporte com a rotação aplicada à posição invertida
-    glm::vec3 rotated_position = glm::rotate(new_rotation, inverted_position);
+	// Criar a nova pose de teleporte com a rotação aplicada à posição invertida
+	glm::vec3 rotated_position = glm::rotate(new_rotation, inverted_position);
 
-    XrPosef teleport_pose = {
-        .orientation = {.x = new_rotation.x, .y = new_rotation.y, .z = new_rotation.z, .w = new_rotation.w},
-        .position = {.x = rotated_position.x, .y = rotated_position.y, .z = rotated_position.z}
-    };
+	XrPosef teleport_pose = {
+		.orientation = {.x = new_rotation.x, .y = new_rotation.y, .z = new_rotation.z, .w = new_rotation.w},
+		.position = {.x = rotated_position.x, .y = rotated_position.y, .z = rotated_position.z}};
 
-    // Criar um novo espaço de referência com a nova pose de teleporte
-    XrReferenceSpaceCreateInfo teleport_space_create_info = {
-        .type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
-        .next = NULL,
-        .referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL,
-        .poseInReferenceSpace = teleport_pose
-    };
+	// Criar um novo espaço de referência com a nova pose de teleporte
+	XrReferenceSpaceCreateInfo teleport_space_create_info = {
+		.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
+		.next = NULL,
+		.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL,
+		.poseInReferenceSpace = teleport_pose};
 
-    XrSpace teleport_space;
-    XrResult result = xrCreateReferenceSpace(self.session, &teleport_space_create_info, &teleport_space);
-    if (!xr_result(self.instance, result, "Failed to create teleport reference space!"))
-    {
-        return;
-    }
+	XrSpace teleport_space;
+	XrResult result = xrCreateReferenceSpace(self.session, &teleport_space_create_info, &teleport_space);
+	if (!xr_result(self.instance, result, "Failed to create teleport reference space!"))
+	{
+		return;
+	}
 
-    // Liberar o antigo espaço de referência, se necessário
-    if (self.play_space != XR_NULL_HANDLE)
-    {
-        xrDestroySpace(self.play_space);
-    }
+	// Liberar o antigo espaço de referência, se necessário
+	if (self.play_space != XR_NULL_HANDLE)
+	{
+		xrDestroySpace(self.play_space);
+	}
 
-    self.play_space = teleport_space;
+	self.play_space = teleport_space;
 }
-
 
 void sdl_handle_events(SDL_Event event, bool *running);
 
@@ -1236,6 +1233,8 @@ void stop_vr()
 	continue_vr = false;
 }
 
+
+XrAction vibration_action;
 void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
 {
 
@@ -1328,7 +1327,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
-	XrAction vibration_action;
+	
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
@@ -2317,8 +2316,32 @@ float get_vr_action(vr_action action)
 	return actions_map[action];
 }
 
-void vibrate_traker(vr_traker_type traker, float power)
+void vibrate_traker(vr_traker_type traker, float power, float duration)
 {
+	XrPath hand_path;
+	if(traker == vr_left_hand){
+		hand_path = self.hand_paths[HAND_LEFT];
+	}
+	if(traker == vr_right_hand){
+		hand_path = self.hand_paths[HAND_RIGHT];
+	}
+
+	XrHapticVibration vibration = {
+		.type = XR_TYPE_HAPTIC_VIBRATION,
+		.next = NULL,
+		.duration = (int64_t)(duration * 1000.0),
+		.frequency = XR_FREQUENCY_UNSPECIFIED,
+		.amplitude = power * 10};
+
+	XrHapticActionInfo haptic_action_info = {
+		.type = XR_TYPE_HAPTIC_ACTION_INFO,
+		.next = NULL,
+		.action = vibration_action,
+		.subactionPath = hand_path};
+
+	XrResult result = xrApplyHapticFeedback(self.session, &haptic_action_info, (XrHapticBaseHeader *)&vibration);
+	if (!xr_result(self.instance, result, "failed to apply haptic feedback"))
+		return;
 }
 
 void end_vr(void(clean_render)(void))

@@ -184,8 +184,8 @@ void before_vr_render()
     glm::vec3 new_poseition(get_vr_action(vr_move_x)*4.0,get_vr_action(vr_move_y)*4.0,get_vr_action(vr_move_z)*4.0);
     reorientate(new_poseition,rotationToQuaternion(get_vr_action(vr_rotate) * 360.0,glm::vec3(0.0,1.0,0.0)));
 
-    
-
+    vibrate_traker(vr_left_hand,1.0,1.0);
+    vibrate_traker(vr_right_hand,1.0,1.0);
 
 }
 

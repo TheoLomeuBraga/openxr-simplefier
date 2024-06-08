@@ -60,9 +60,9 @@ void vibrate_traker(vr_traker_type traker,float power);
 
 std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand);
 
+void vibrate_traker(vr_traker_type traker, float power,float duration);
+
 void reorientate(glm::vec3 new_position, glm::quat new_rotation);
-
-
 
 void stop_vr();
 
