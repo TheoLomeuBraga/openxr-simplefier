@@ -1281,6 +1281,21 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
+	XrAction grab_action_click_boolean;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "grab_click");
+		strcpy(action_info.localizedActionName, "Grab Click");
+
+		result = xrCreateAction(main_actionset, &action_info, &grab_action_click_boolean);
+		if (!xr_result(self.instance, result, "failed to create grab action"))
+			return;
+	}
+
 	XrAction use_action_float;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
@@ -1371,6 +1386,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	}
 
 	XrAction menu_action_boolean;
+	XrAction menu_click_action_boolean;
 	{
 		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
 										  .next = NULL,
@@ -1383,7 +1399,20 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		result = xrCreateAction(main_actionset, &action_info, &menu_action_boolean);
 		if (!xr_result(self.instance, result, "failed to create menu action"))
 			return;
+
+		action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = 1,
+										  .subactionPaths = &self.hand_paths[HAND_LEFT]};
+		strcpy(action_info.actionName, "menu_click");
+		strcpy(action_info.localizedActionName, "Menu click");
+
+		result = xrCreateAction(main_actionset, &action_info, &menu_action_boolean);
+		if (!xr_result(self.instance, result, "failed to create menu action"))
+			return;
 	}
+	
 
 	XrAction teleport_action_boolean;
 	{
@@ -1501,6 +1530,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	XrPath menu_path;
 	xrStringToPath(self.instance, "/user/hand/left/input/menu", &menu_path);
 
+	
+
 	{
 		XrPath interaction_profile_path;
 		result = xrStringToPath(self.instance, "/interaction_profiles/oculus/touch_controller",
@@ -1583,7 +1614,86 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 	*/
 
+	XrPath grab_click_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/click", &grab_click_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/click", &grab_click_path[HAND_RIGHT]);
 
+	XrPath menu_click_path;
+	xrStringToPath(self.instance, "/user/hand/left/input/menu/click", &menu_path);
+
+	/*
+	XrPath use_2_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/x/click", &use_2_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/a/click", &use_2_path[HAND_RIGHT]);
+
+	XrPath use_3_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/y/click", &use_3_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/b/click", &use_3_path[HAND_RIGHT]);
+
+	XrPath movement_x_z_path;
+	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick", &movement_x_z_path);
+
+	XrPath movement_rotation_y_path;
+	xrStringToPath(self.instance, "/user/hand/right/input/thumbstick", &movement_rotation_y_path);
+
+	XrPath teleport_path;
+	xrStringToPath(self.instance, "/user/hand/left/input/thumbstick/click", &teleport_path);
+
+	XrPath special_path;
+	xrStringToPath(self.instance, "/user/hand/right/input/b", &special_path);
+	*/
+
+	{
+		XrPath interaction_profile_path;
+		result = xrStringToPath(self.instance, "/interaction_profiles/htc/vive_controller",
+								&interaction_profile_path);
+		if (!xr_result(self.instance, result, "failed to get interaction profile"))
+			return;
+
+		const XrActionSuggestedBinding bindings[] = {
+			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
+			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
+
+			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_LEFT]},
+			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_RIGHT]},
+
+			{.action = vibration_action, .binding = vibrate_path[HAND_LEFT]},
+			{.action = vibration_action, .binding = vibrate_path[HAND_RIGHT]}, 
+
+			{.action = menu_click_action_boolean, .binding = menu_click_path},
+
+			/*
+
+			{.action = use_action_float, .binding = use_path[HAND_LEFT]},
+			{.action = use_action_float, .binding = use_path[HAND_RIGHT]},
+
+			{.action = use_2_action_boolean, .binding = use_2_path[HAND_LEFT]},
+			{.action = use_2_action_boolean, .binding = use_2_path[HAND_RIGHT]},
+
+			{.action = use_3_action_boolean, .binding = use_3_path[HAND_LEFT]},
+			{.action = use_3_action_boolean, .binding = use_3_path[HAND_RIGHT]},
+
+			{.action = move_x_z_action_vec_2, .binding = movement_x_z_path},
+			{.action = move_rotation_y_action_vec_2, .binding = movement_rotation_y_path},
+			{.action = teleport_action_boolean, .binding = teleport_path},
+
+			
+
+			*/
+
+		};
+
+		const XrInteractionProfileSuggestedBinding suggested_bindings = {
+			.type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+			.next = NULL,
+			.interactionProfile = interaction_profile_path,
+			.countSuggestedBindings = sizeof(bindings) / sizeof(bindings[0]),
+			.suggestedBindings = bindings};
+
+		xrSuggestInteractionProfileBindings(self.instance, &suggested_bindings);
+		if (!xr_result(self.instance, result, "failed to suggest bindings"))
+			return;
+	}
 
 	XrSpace pose_action_spaces[HAND_COUNT];
 	{
@@ -1838,35 +1948,45 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 		// query each value / location with a subaction path != XR_NULL_PATH
 		// resulting in individual values per hand/.
-		XrActionStateFloat grab_value[HAND_COUNT];
-		XrActionStateFloat use_value[HAND_COUNT];
-		XrActionStateBoolean use_2_value[HAND_COUNT];
-		XrActionStateBoolean use_3_value[HAND_COUNT];
-
-		XrActionStateBoolean menu_value;
-		XrActionStateBoolean teleport_value;
-		XrActionStateFloat rotate_value;
-		XrActionStateVector2f movement_x_z_value;
-		XrActionStateVector2f movement_rotation_y_value;
+		
+		
+		
+		
+		
+		
+		
 
 		XrSpaceLocation hand_locations[HAND_COUNT];
 		bool hand_locations_valid[HAND_COUNT];
 
+		XrActionStateBoolean menu_value;
 		{
-			XrActionStateBoolean menu_state;
 			XrActionStateGetInfo get_info = {
 				.type = XR_TYPE_ACTION_STATE_GET_INFO,
 				.next = NULL,
 				.action = menu_action_boolean,
 				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
 			};
-			result = xrGetActionStateBoolean(self.session, &get_info, &menu_state);
-			if (menu_state.isActive)
+			result = xrGetActionStateBoolean(self.session, &get_info, &menu_value);
+			if (menu_value.isActive)
 			{
-				actions_map[vr_menu] = menu_state.currentState;
+				actions_map[vr_menu] = menu_value.currentState;
+			}
+
+			get_info = {
+				.type = XR_TYPE_ACTION_STATE_GET_INFO,
+				.next = NULL,
+				.action = menu_click_action_boolean,
+				.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+			};
+			result = xrGetActionStateBoolean(self.session, &get_info, &menu_value);
+			if (menu_value.isActive)
+			{
+				actions_map[vr_menu] = menu_value.currentState;
 			}
 		}
 
+		XrActionStateBoolean teleport_value;
 		{
 			XrActionStateGetInfo get_info = {
 				.type = XR_TYPE_ACTION_STATE_GET_INFO,
@@ -1891,6 +2011,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
+		XrActionStateVector2f movement_x_z_value;
 		{
 			XrActionStateGetInfo get_info = {
 				.type = XR_TYPE_ACTION_STATE_GET_INFO,
@@ -1915,6 +2036,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
+		XrActionStateVector2f movement_rotation_y_value;
 		{
 			XrActionStateGetInfo get_info = {
 				.type = XR_TYPE_ACTION_STATE_GET_INFO,
@@ -1939,6 +2061,8 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
+		XrActionStateFloat grab_value[HAND_COUNT];
+		XrActionStateBoolean grab_click_value[HAND_COUNT];
 		{
 			{
 				XrActionStateGetInfo get_info = {
@@ -1970,8 +2094,40 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 					actions_map[vr_grab_r] = grab_value[HAND_RIGHT].currentState;
 				}
 			}
+
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = grab_action_click_boolean,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &grab_click_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (grab_click_value[HAND_LEFT].isActive)
+				{
+					actions_map[vr_grab_l] = grab_click_value[HAND_LEFT].currentState;
+				}
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = grab_action_click_boolean,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &grab_click_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+
+				if (grab_click_value[HAND_RIGHT].isActive)
+				{
+					actions_map[vr_grab_r] = grab_click_value[HAND_RIGHT].currentState;
+				}
+			}
 		}
 
+		XrActionStateFloat use_value[HAND_COUNT];
 		{
 			{
 				XrActionStateGetInfo get_info = {
@@ -2005,6 +2161,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
+		XrActionStateBoolean use_2_value[HAND_COUNT];
 		{
 			{
 				XrActionStateGetInfo get_info = {
@@ -2038,6 +2195,7 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
+		XrActionStateBoolean use_3_value[HAND_COUNT];
 		{
 			{
 				XrActionStateGetInfo get_info = {
