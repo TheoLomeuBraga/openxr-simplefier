@@ -1202,8 +1202,6 @@ std::map<unsigned char, vr_pose> traker_pose_map = {
 
 };
 
-
-
 XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
 XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
 std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand)
@@ -1234,6 +1232,9 @@ void stop_vr()
 {
 	continue_vr = false;
 }
+
+bool trakpad_active[HAND_COUNT];
+glm::vec2 trakpad_first_state[HAND_COUNT];
 
 XrAction vibration_action;
 void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm::ivec2, glm::mat4, glm::mat4), void(after_render)(void))
@@ -1630,6 +1631,21 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			return;
 	}
 
+	XrAction trackpad_touch_boolean;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_BOOLEAN_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "trackpad_touch");
+		strcpy(action_info.localizedActionName, "Trackpad Touch");
+
+		result = xrCreateAction(main_actionset, &action_info, &trackpad_touch_boolean);
+		if (!xr_result(self.instance, result, "failed to create Trackpad Touch action"))
+			return;
+	}
+
 	XrPath grab_click_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/click", &grab_click_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/click", &grab_click_path[HAND_RIGHT]);
@@ -1641,6 +1657,10 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	XrPath trackpad_click_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/trackpad/click", &trackpad_click_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/trackpad/click", &trackpad_click_path[HAND_RIGHT]);
+
+	XrPath trackpad_touch_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/trackpad/touch", &trackpad_touch_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/trackpad/touch", &trackpad_touch_path[HAND_RIGHT]);
 
 	/*
 	XrPath use_2_path[HAND_COUNT];
@@ -1691,6 +1711,9 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 			{.action = trackpad_click_boolean, .binding = trackpad_click_path[HAND_LEFT]},
 			{.action = trackpad_click_boolean, .binding = trackpad_click_path[HAND_RIGHT]},
+
+			{.action = trackpad_touch_boolean, .binding = trackpad_touch_path[HAND_LEFT]},
+			{.action = trackpad_touch_boolean, .binding = trackpad_touch_path[HAND_RIGHT]},
 
 		};
 
@@ -2221,7 +2244,6 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
-
 		XrActionStateBoolean trakpad_click_value[HAND_COUNT];
 		{
 			{
@@ -2242,6 +2264,30 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
 				};
 				result = xrGetActionStateBoolean(self.session, &get_info, &trakpad_click_value[HAND_RIGHT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+			}
+		}
+
+		XrActionStateBoolean trakpad_touch_value[HAND_COUNT];
+		{
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = trackpad_touch_boolean,
+					.subactionPath = self.hand_paths[HAND_LEFT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &trakpad_touch_value[HAND_LEFT]);
+				xr_result(self.instance, result, "failed to get teleport action state");
+			}
+			{
+				XrActionStateGetInfo get_info = {
+					.type = XR_TYPE_ACTION_STATE_GET_INFO,
+					.next = NULL,
+					.action = trackpad_touch_boolean,
+					.subactionPath = self.hand_paths[HAND_RIGHT] // Ou o path apropriado se for para outra mão
+				};
+				result = xrGetActionStateBoolean(self.session, &get_info, &trakpad_touch_value[HAND_RIGHT]);
 				xr_result(self.instance, result, "failed to get teleport action state");
 			}
 		}
@@ -2270,9 +2316,81 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			}
 		}
 
-		//use trakpad
+		// use trakpad
+		// bool trakpad_active[HAND_COUNT];
+		// glm::vec2 trakpad_first_state[HAND_COUNT];
 		{
-			
+
+			glm::vec2 touch_slide[HAND_COUNT];
+
+			for (int HAND = 0; HAND < HAND_COUNT; HAND++)
+			{
+				if (trakpad_touch_value[HAND].currentState && !trakpad_active[HAND])
+				{
+					trakpad_active[HAND] = true;
+					trakpad_first_state[HAND] = glm::vec2(-trakpad_value[HAND].currentState.x, -trakpad_value[HAND].currentState.y);
+				}
+				else if (trakpad_touch_value[HAND].currentState == false)
+				{
+					trakpad_active[HAND] = false;
+				}
+
+				if (trakpad_active[HAND])
+				{
+					touch_slide[HAND] = trakpad_first_state[HAND] - glm::vec2(-trakpad_value[HAND].currentState.x, -trakpad_value[HAND].currentState.y);
+				}
+				else
+				{
+					touch_slide[HAND] = glm::vec2(0, 0);
+				}
+
+				// std::cout << touch_slide[HAND].x << "	" << touch_slide[HAND].y << std::endl;
+				//std::cout << trakpad_touch_value[HAND].isActive << "	" << trakpad_value[HAND].isActive << "	" << trakpad_value[HAND].currentState.x << std::endl;
+			}
+
+			if (trakpad_touch_value[HAND_LEFT].currentState)
+			{
+				actions_map[vr_move_x] = touch_slide[HAND_LEFT].y;
+				actions_map[vr_move_z] = touch_slide[HAND_LEFT].x;
+			}
+
+			if (trakpad_touch_value[HAND_RIGHT].currentState)
+			{
+				actions_map[vr_rotate] = touch_slide[HAND_RIGHT].x;
+				actions_map[vr_move_y] = touch_slide[HAND_RIGHT].y;
+			}
+
+			actions_map[vr_teleport] = 0.0;
+			actions_map[vr_use_2_l] = 0.0;
+			actions_map[vr_use_3_l] = 0.0;
+			actions_map[vr_use_2_r] = 0.0;
+			actions_map[vr_use_3_r] = 0.0;
+
+			if (trakpad_click_value[HAND_LEFT].currentState)
+			{
+				
+				if (-trakpad_value[HAND_LEFT].currentState.y < -0.5)
+				{
+					actions_map[vr_teleport] = 1.0;
+				}
+				else if (-trakpad_value[HAND_LEFT].currentState.y > 0.5)
+				{
+					actions_map[vr_use_2_l] = 1.0;
+				}else if (-trakpad_value[HAND_LEFT].currentState.x < -0.5 || -trakpad_value[HAND_LEFT].currentState.x > 0.5){
+					actions_map[vr_use_3_l] = 1.0;
+				}
+			}
+
+			if (trakpad_click_value[HAND_RIGHT].currentState)
+			{
+				
+				if (-trakpad_value[HAND_RIGHT].currentState.y > 0.5)
+				{
+					actions_map[vr_use_2_r] = 1.0;
+				}else if (-trakpad_value[HAND_RIGHT].currentState.x < -0.5 || -trakpad_value[HAND_RIGHT].currentState.x > 0.5){
+					actions_map[vr_use_3_r] = 1.0;
+				}
+			}
 		}
 
 		for (int i = 0; i < HAND_COUNT; i++)
