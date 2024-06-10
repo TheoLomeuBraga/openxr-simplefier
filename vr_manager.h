@@ -37,6 +37,8 @@ typedef struct vr_pose_struct vr_pose;
 
 vr_pose get_vr_traker_pose(vr_traker_type traker);
 
+vr_pose get_vr_aim_pose(vr_traker_type traker);
+
 enum vr_action{
     vr_grab_l = 0,
     vr_grab_r = 1,

@@ -1202,6 +1202,13 @@ std::map<unsigned char, vr_pose> traker_pose_map = {
 
 };
 
+std::map<unsigned char, vr_pose> aim_pose_map = {
+	std::pair<unsigned char, vr_pose>(0, {glm::vec3(0, 0, 0), glm::quat(0, 0, 0, 1)}),
+	std::pair<unsigned char, vr_pose>(1, {glm::vec3(0, 0, 0), glm::quat(0, 0, 0, 1)}),
+	std::pair<unsigned char, vr_pose>(2, {glm::vec3(0, 0, 0), glm::quat(0, 0, 0, 1)}),
+
+};
+
 XrHandJointLocationEXT joints[HAND_COUNT][XR_HAND_JOINT_COUNT_EXT];
 XrHandJointLocationsEXT joint_locations[HAND_COUNT] = {{}};
 std::vector<vr_pose> get_vr_joints_infos(vr_traker_type hand)
@@ -1265,6 +1272,21 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		strcpy(action_info.localizedActionName, "Hand Pose");
 
 		result = xrCreateAction(main_actionset, &action_info, &pose_action);
+		if (!xr_result(self.instance, result, "failed to create pose action"))
+			return;
+	}
+
+	XrAction aim_action;
+	{
+		XrActionCreateInfo action_info = {.type = XR_TYPE_ACTION_CREATE_INFO,
+										  .next = NULL,
+										  .actionType = XR_ACTION_TYPE_POSE_INPUT,
+										  .countSubactionPaths = HAND_COUNT,
+										  .subactionPaths = self.hand_paths.data()};
+		strcpy(action_info.actionName, "aimpose");
+		strcpy(action_info.localizedActionName, "aim Pose");
+
+		result = xrCreateAction(main_actionset, &action_info, &aim_action);
 		if (!xr_result(self.instance, result, "failed to create pose action"))
 			return;
 	}
@@ -1484,6 +1506,10 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 	xrStringToPath(self.instance, "/user/hand/left/input/grip/pose", &grip_pose_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/grip/pose", &grip_pose_path[HAND_RIGHT]);
 
+	XrPath aim_pose_path[HAND_COUNT];
+	xrStringToPath(self.instance, "/user/hand/left/input/aim/pose", &aim_pose_path[HAND_LEFT]);
+	xrStringToPath(self.instance, "/user/hand/right/input/aim/pose", &aim_pose_path[HAND_RIGHT]);
+
 	XrPath grab_path[HAND_COUNT];
 	xrStringToPath(self.instance, "/user/hand/left/input/squeeze/value", &grab_path[HAND_LEFT]);
 	xrStringToPath(self.instance, "/user/hand/right/input/squeeze/value", &grab_path[HAND_RIGHT]);
@@ -1529,6 +1555,9 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		const XrActionSuggestedBinding bindings[] = {
 			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
+
+			{.action = aim_action, .binding = aim_pose_path[HAND_LEFT]},
+			{.action = aim_action, .binding = aim_pose_path[HAND_RIGHT]},
 
 			{.action = grab_action_float, .binding = grab_path[HAND_LEFT]},
 			{.action = grab_action_float, .binding = grab_path[HAND_RIGHT]},
@@ -1695,6 +1724,9 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 			{.action = pose_action, .binding = grip_pose_path[HAND_LEFT]},
 			{.action = pose_action, .binding = grip_pose_path[HAND_RIGHT]},
 
+			{.action = aim_action, .binding = aim_pose_path[HAND_LEFT]},
+			{.action = aim_action, .binding = aim_pose_path[HAND_RIGHT]},
+
 			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_LEFT]},
 			{.action = grab_action_click_boolean, .binding = grab_click_path[HAND_RIGHT]},
 
@@ -1752,6 +1784,33 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 
 		result =
 			xrCreateActionSpace(self.session, &action_space_info, &pose_action_spaces[HAND_RIGHT]);
+		if (!xr_result(self.instance, result, "failed to create left hand pose space"))
+			return;
+	}
+	
+	XrSpace aim_action_spaces[HAND_COUNT];
+	{
+		XrActionSpaceCreateInfo action_space_info;
+		action_space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+		action_space_info.next = NULL;
+		action_space_info.action = aim_action;
+		action_space_info.poseInActionSpace = identity_pose;
+		action_space_info.subactionPath = self.hand_paths[HAND_LEFT];
+
+		result = xrCreateActionSpace(self.session, &action_space_info, &aim_action_spaces[HAND_LEFT]);
+		if (!xr_result(self.instance, result, "failed to create left hand pose space"))
+			return;
+	}
+	{
+		XrActionSpaceCreateInfo action_space_info;
+		action_space_info.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+		action_space_info.next = NULL;
+		action_space_info.action = aim_action;
+		action_space_info.poseInActionSpace = identity_pose;
+		action_space_info.subactionPath = self.hand_paths[HAND_RIGHT];
+
+		result =
+			xrCreateActionSpace(self.session, &action_space_info, &aim_action_spaces[HAND_RIGHT]);
 		if (!xr_result(self.instance, result, "failed to create left hand pose space"))
 			return;
 	}
@@ -1984,7 +2043,9 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 		// resulting in individual values per hand/.
 
 		XrSpaceLocation hand_locations[HAND_COUNT];
+		XrSpaceLocation hand_aim[HAND_COUNT];
 		bool hand_locations_valid[HAND_COUNT];
+		bool hand_aim_valid[HAND_COUNT];
 
 		XrActionStateBoolean menu_value;
 		{
@@ -2424,6 +2485,34 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 				traker_pose_map[vr_right_hand].position = glm::vec3(hand_locations[i].pose.position.x, hand_locations[i].pose.position.y, hand_locations[i].pose.position.z);
 				traker_pose_map[vr_right_hand].quaternion = glm::quat(hand_locations[i].pose.orientation.w, hand_locations[i].pose.orientation.x, hand_locations[i].pose.orientation.y, hand_locations[i].pose.orientation.z);
 			}
+
+			XrActionStatePose aim_state = {.type = XR_TYPE_ACTION_STATE_POSE, .next = NULL};
+			{
+				XrActionStateGetInfo get_info = {.type = XR_TYPE_ACTION_STATE_GET_INFO,
+												 .next = NULL,
+												 .action = aim_action,
+												 .subactionPath = self.hand_paths[i]};
+				result = xrGetActionStatePose(self.session, &get_info, &aim_state);
+				xr_result(self.instance, result, "failed to get pose value!");
+			}
+
+			hand_aim[i].type = XR_TYPE_SPACE_LOCATION;
+			hand_aim[i].next = NULL;
+
+			result = xrLocateSpace(aim_action_spaces[i], self.play_space, frameState.predictedDisplayTime, &hand_aim[i]);
+			xr_result(self.instance, result, "failed to locate space %d!", i);
+			hand_aim_valid[i] = (hand_aim[i].locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0;
+
+			if (i == HAND_LEFT)
+			{
+				aim_pose_map[vr_left_hand].position = glm::vec3(hand_aim[i].pose.position.x, hand_aim[i].pose.position.y, hand_aim[i].pose.position.z);
+				aim_pose_map[vr_left_hand].quaternion = glm::quat(hand_aim[i].pose.orientation.w, hand_aim[i].pose.orientation.x, hand_aim[i].pose.orientation.y, hand_aim[i].pose.orientation.z);
+			}
+			else if (i == HAND_RIGHT)
+			{
+				aim_pose_map[vr_right_hand].position = glm::vec3(hand_aim[i].pose.position.x, hand_aim[i].pose.position.y, hand_aim[i].pose.position.z);
+				aim_pose_map[vr_right_hand].quaternion = glm::quat(hand_aim[i].pose.orientation.w, hand_aim[i].pose.orientation.x, hand_aim[i].pose.orientation.y, hand_aim[i].pose.orientation.z);
+			}
 		}
 
 		// --- Begin frame
@@ -2667,6 +2756,11 @@ void update_vr(void(before_render)(void), void(update_render)(unsigned int, glm:
 vr_pose get_vr_traker_pose(vr_traker_type traker)
 {
 	return traker_pose_map[traker];
+}
+
+vr_pose get_vr_aim_pose(vr_traker_type traker)
+{
+	return aim_pose_map[traker];
 }
 
 float get_vr_action(vr_action action)

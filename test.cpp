@@ -154,18 +154,17 @@ void main()
 GLuint depthBuffer;
 void start_vr_render()
 {
-    //deph
+    // deph
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-
-    
 
     glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     render_shapes::setup_cube_render();
 }
 
-glm::quat rotationToQuaternion(float angle_degrees, const glm::vec3& axis) {
+glm::quat rotationToQuaternion(float angle_degrees, const glm::vec3 &axis)
+{
     // Converta o ângulo de graus para radianos
     float angle_radians = glm::radians(angle_degrees);
 
@@ -176,24 +175,24 @@ glm::quat rotationToQuaternion(float angle_degrees, const glm::vec3& axis) {
 }
 void before_vr_render()
 {
-    if(get_vr_action(vr_menu) == 1.0){
+    if (get_vr_action(vr_menu) == 1.0)
+    {
         std::cout << "i will stop now\n";
         stop_vr();
     }
 
-    glm::vec3 new_poseition(get_vr_action(vr_move_x)*4.0,get_vr_action(vr_move_y)*4.0,get_vr_action(vr_move_z)*4.0);
-    reorientate(new_poseition,rotationToQuaternion(get_vr_action(vr_rotate) * 360.0,glm::vec3(0.0,1.0,0.0)));
+    glm::vec3 new_poseition(get_vr_action(vr_move_x) * 4.0, get_vr_action(vr_move_y) * 4.0, get_vr_action(vr_move_z) * 4.0);
+    reorientate(new_poseition, rotationToQuaternion(get_vr_action(vr_rotate) * 360.0, glm::vec3(0.0, 1.0, 0.0)));
 
-    //vibrate_traker(vr_left_hand,1.0,1.0);
-    //vibrate_traker(vr_right_hand,1.0,1.0);
-
+    // vibrate_traker(vr_left_hand,1.0,1.0);
+    // vibrate_traker(vr_right_hand,1.0,1.0);
 }
 
 unsigned char c = 0;
 void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat4 view, glm::mat4 projection)
 {
 
-    //deph
+    // deph
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -207,28 +206,33 @@ void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat
     pose = get_vr_traker_pose(vr_right_hand);
     render_shapes::render_cube(view, projection, pose.position, glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0.02, 0.02, 0.1), pose.quaternion);
 
-    //grab
-    render_shapes::render_cube(view, projection, glm::vec3(2.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
-    render_shapes::render_cube(view, projection, glm::vec3(-2.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    pose = get_vr_aim_pose(vr_left_hand);
+    render_shapes::render_cube(view, projection, pose.position, glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0.02, 0.02, 0.15), pose.quaternion);
+    pose = get_vr_aim_pose(vr_right_hand);
+    render_shapes::render_cube(view, projection, pose.position, glm::vec4(1.0, 0.0, 0.0, 1.0), glm::vec3(0.02, 0.02, 0.15), pose.quaternion);
 
-    //triger
-    render_shapes::render_cube(view, projection, glm::vec3(2.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
-    render_shapes::render_cube(view, projection, glm::vec3(-2.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    // grab
+    render_shapes::render_cube(view, projection, glm::vec3(2.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_l), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(-2.0, 2.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_grab_r), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
 
-    render_shapes::render_cube(view, projection, glm::vec3(3.0, 3.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_2_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
-    render_shapes::render_cube(view, projection, glm::vec3(-3.0, 3.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_2_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    // triger
+    render_shapes::render_cube(view, projection, glm::vec3(2.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_l), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(-2.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_r), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
 
-    render_shapes::render_cube(view, projection, glm::vec3(3.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_3_l), 1.0), glm::quat(1.0,0.0,0.0,0.0));
-    render_shapes::render_cube(view, projection, glm::vec3(-3.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_3_r), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(3.0, 3.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_2_l), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(-3.0, 3.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_2_r), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
 
-    render_shapes::render_cube(view, projection, glm::vec3(0.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_teleport), 1.0), glm::quat(1.0,0.0,0.0,0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(3.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_3_l), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
+    render_shapes::render_cube(view, projection, glm::vec3(-3.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_use_3_r), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
+
+    render_shapes::render_cube(view, projection, glm::vec3(0.0, 4.0, 4.0), glm::vec4(1.0, 1.0, 0.0, 1.0), glm::vec3(1.0, get_vr_action(vr_teleport), 1.0), glm::quat(1.0, 0.0, 0.0, 0.0));
 
     int i = 0;
     std::vector<vr_pose> joint_list = get_vr_joints_infos(vr_left_hand);
     for (vr_pose p : joint_list)
     {
         i++;
-        float color_power =  (float)joint_list.size() / (float)i;
+        float color_power = (float)joint_list.size() / (float)i;
         render_shapes::render_cube(view, projection, p.position, glm::vec4(0.5 / color_power, 1.0 / color_power, 0.5 / color_power, 1.0), glm::vec3(0.01, 0.01, 0.01), p.quaternion);
     }
 
@@ -237,10 +241,10 @@ void update_vr_render(unsigned int frame_buffer, glm::ivec2 resolution, glm::mat
     for (vr_pose p : joint_list)
     {
         i++;
-        float color_power =  (float)joint_list.size() / (float)i;
+        float color_power = (float)joint_list.size() / (float)i;
         render_shapes::render_cube(view, projection, p.position, glm::vec4(0.0, 1.0 / color_power, 0.0, 1.0), glm::vec3(0.01, 0.01, 0.01), p.quaternion);
     }
-    
+
     ////deph
 }
 
